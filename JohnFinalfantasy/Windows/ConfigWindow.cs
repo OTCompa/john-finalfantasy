@@ -15,12 +15,14 @@ public class ConfigWindow : Window, IDisposable
 
     private string[] firstName = new string[8];
     private string[] lastName = new string[8];
+    private Plugin plugin;
 
     // We give this window a constant ID using ###
     // This allows for labels being dynamic, like "{FPS Counter}fps###XYZ counter window",
     // and the window ID will always be "###XYZ counter window" for ImGui
     public ConfigWindow(Plugin plugin) : base("A Wonderful Configuration Window###With a constant ID")
     {
+        this.plugin = plugin;
         Flags = ImGuiWindowFlags.NoCollapse;
 
         Size = new Vector2(450, 420);
@@ -115,6 +117,8 @@ public class ConfigWindow : Window, IDisposable
                 var last = lastName[i];
                 var name = first + " " + last;
                 Configuration.PartyNames[i] = name;
+                Configuration.Save();
+                this.plugin.UpdateParty("", "");
             }
         }
         

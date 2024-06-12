@@ -82,11 +82,6 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
         CommandManager.RemoveHandler("/testcommand");
-
-        if (Obscurer.stateChanged)
-        {
-            Obscurer.ResetPartyList();
-        }
         
         Obscurer.Dispose();
         Functions.Dispose();
@@ -103,6 +98,7 @@ public sealed class Plugin : IDalamudPlugin
     }
     private unsafe void TestCommand(string command, string args)
     {
+        
         var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
         foreach (var member in Service.PartyList)
         {
@@ -115,12 +111,12 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
    
-    private void UpdateParty(string command, string args)
+    internal void UpdateParty(string command, string args)
     {
         this.Obscurer.UpdatePartyList();
     }
     
-    private void ResetParty(string command, string args)
+    internal void ResetParty(string command, string args)
     {
         this.Obscurer.ResetPartyList();
     }
