@@ -1,0 +1,9 @@
+{
+  "Author": "Frey",
+  "Name": "John Finalfantasy",
+  "Punchline": "Streamer mode for FFXIV.",
+  "Description": "A plugin that replaces the names of players in your party with preset names. Based on Nomina Occulta by anna.lgbt.",
+  "ApplicableVersion": "any",
+  "Tags": [
+  ]
+}
