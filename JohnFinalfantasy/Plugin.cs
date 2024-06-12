@@ -21,7 +21,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private Service service { get; init; }
     internal GameFunctions Functions { get; init; }
-    private Obscurer Obscurer { get; init; }
+    internal Obscurer Obscurer { get; init; }
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
         [RequiredVersion("1.0")] ICommandManager commandManager,
@@ -65,7 +65,12 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = "reset plist"
         });
-        
+
+        CommandManager.AddHandler("/updateself", new CommandInfo(UpdateSelf)
+        {
+            HelpMessage = "update self"
+        });
+
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // This adds a button to the plugin installer entry of this plugin which allows
@@ -79,6 +84,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
 
+        CommandManager.RemoveHandler("/updateself");
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
         CommandManager.RemoveHandler("/testcommand");
@@ -119,6 +125,11 @@ public sealed class Plugin : IDalamudPlugin
     internal void ResetParty(string command, string args)
     {
         this.Obscurer.ResetPartyList();
+    }
+    
+    internal void UpdateSelf(string command, string args)
+    {
+        this.Obscurer.UpdateSelf();
     }
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();

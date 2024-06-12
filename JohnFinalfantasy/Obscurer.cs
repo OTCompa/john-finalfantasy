@@ -19,7 +19,7 @@ internal unsafe class Obscurer : IDisposable {
     private Dictionary<string, string> replacements { get; set; }
     private Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String> currentlySwapped { get; set; }
     internal bool stateChanged { get; set; } = false;
-    private int partySize { get; set; } = 0;
+    internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
     private FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm* InfoProxyCrossRealm { get; set; }
 
@@ -28,7 +28,11 @@ internal unsafe class Obscurer : IDisposable {
         replacements = new Dictionary<string, string>();
         currentlySwapped = new Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String>();
         InfoProxyCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
-        unsafe
+        if (this.Plugin.Configuration.EnableForSelf)
+        {
+            UpdateSelf();
+        }
+        if (this.Plugin.Configuration.EnableForParty)
         {
             var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
             if (isCrossRealm)
@@ -36,8 +40,8 @@ internal unsafe class Obscurer : IDisposable {
                 var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
                 var numMembers = (int)crossRealmGroup->GroupMemberCount;
                 var pMember = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmMember*)crossRealmGroup->GroupMembers;
-                //pMember++;
-                for (int i = 0; i < numMembers; i++)
+                pMember++;
+                for (int i = 1; i < numMembers; i++)
                 {
                     string name = Marshal.PtrToStringUTF8((nint)pMember->Name);
                     var worldShort = pMember->HomeWorld;
@@ -59,7 +63,9 @@ internal unsafe class Obscurer : IDisposable {
                 {
                     var pMemberHud = &pListHud->PartyMember.PartyMember0;
                     var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                    for (int i = 0; i < pListHud->MemberCount; i++)
+                    pMemberHud++;
+                    pMemberAgentHud++;
+                    for (int i = 1; i < pListHud->MemberCount; i++)
                     {
                         var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
                         string world = "Unassigned";
@@ -112,7 +118,14 @@ internal unsafe class Obscurer : IDisposable {
         {
             return;
         }
-        UpdatePartyList();
+        if (this.Plugin.Configuration.EnableForSelf)
+        {
+            UpdateSelf();
+        }
+        if (this.Plugin.Configuration.EnableForParty)
+        {
+            UpdatePartyList();
+        }
     }
 
     private void OnFrameworkUpdate(IFramework framework) {
@@ -126,13 +139,20 @@ internal unsafe class Obscurer : IDisposable {
         {
             partySize = Service.PartyList.Length;
         }
-        if (isCrossRealm == this.crossRealm || this.partySize == partySize)
+        if (isCrossRealm == this.crossRealm && this.partySize == partySize)
         {
             return;
         }
         this.crossRealm = isCrossRealm;
         this.partySize = partySize;
-        UpdatePartyList();
+        if (this.Plugin.Configuration.EnableForSelf)
+        {
+            UpdateSelf();
+        }
+        if (this.Plugin.Configuration.EnableForParty)
+        {
+            UpdatePartyList();
+        }
     }
     
 
@@ -226,6 +246,26 @@ internal unsafe class Obscurer : IDisposable {
         
         return changed;
     }
+
+    internal unsafe void UpdateSelf()
+    {
+        var player = Service.ClientState.LocalPlayer;
+        var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+        if (pListHud == null)
+        {
+            return;
+        }
+        var pMemberHud = &pListHud->PartyMember.PartyMember0;
+        string name = player.Name.ToString();
+        var world = player.HomeWorld.GameData.Name.ToString();
+        var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
+        replacements[name + world] = this.Plugin.Configuration.PartyNames[0];
+        var textNode = pMemberHud->Name->NodeText;
+        Service.PluginLog.Info("Self updating: " + name + " " + world);
+        currentlySwapped[name + world] = textNode;
+        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
+        stateChanged = true;
+    }
     internal unsafe void UpdatePartyList()
     {
         var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
@@ -236,7 +276,9 @@ internal unsafe class Obscurer : IDisposable {
             var pMemberIP = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmMember*)pListInfoProxy->GroupMembers;
             var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
             var pMemberHud = &pListHud->PartyMember.PartyMember0;
-            for (int i = 0; i < numMembers; i++)
+            pMemberHud++;
+            pMemberIP++;
+            for (int i = 1; i < numMembers; i++)
             {
                 string name = Marshal.PtrToStringUTF8((nint)pMemberIP->Name);
                 var worldShort = pMemberIP->HomeWorld;
@@ -265,7 +307,9 @@ internal unsafe class Obscurer : IDisposable {
             {
                 var pMemberHud = &pListHud->PartyMember.PartyMember0;
                 var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                for (int i = 0; i < pListHud->MemberCount; i++)
+                pMemberHud++;
+                pMemberAgentHud++;
+                for (int i = 1; i < pListHud->MemberCount; i++)
                 {
                     var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
                     var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
