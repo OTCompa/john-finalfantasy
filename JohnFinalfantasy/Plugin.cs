@@ -1,7 +1,6 @@
 using Dalamud.Game.Command;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using JohnFinalfantasy.Windows;
@@ -17,7 +16,6 @@ public sealed class Plugin : IDalamudPlugin
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
-    private MainWindow MainWindow { get; init; }
 
     private Service service { get; init; }
     internal GameFunctions Functions { get; init; }
@@ -32,24 +30,16 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager = commandManager;
 
         Service.Initialize(pluginInterface);
-        //this.NameRepository = new NameRepository(this);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Configuration.Initialize(PluginInterface);
 
         this.Functions = new GameFunctions(this);
         this.Obscurer = new Obscurer(this);
-        // you might normally want to embed resources and load them from the manifest stream
-        var file = new FileInfo(Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png"));
-
-        // ITextureProvider takes care of the image caching and dispose
-        var goatImage = textureProvider.GetTextureFromFile(file);
 
         ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this, goatImage);
 
         WindowSystem.AddWindow(ConfigWindow);
-        WindowSystem.AddWindow(MainWindow);
 
         CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
         {
@@ -77,8 +67,6 @@ public sealed class Plugin : IDalamudPlugin
         // to toggle the display status of the configuration ui
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
 
-        // Adds another button that is doing the same but for the main ui of the plugin
-        PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
     }
 
     public void Dispose()
@@ -93,15 +81,9 @@ public sealed class Plugin : IDalamudPlugin
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();
         ConfigWindow.Dispose();
-        MainWindow.Dispose();
 
     }
 
-    private void OnCommand(string command, string args)
-    {
-        // in response to the slash command, just toggle the display status of our main ui
-        ToggleMainUI();
-    }
     private unsafe void TestCommand(string command, string args)
     {
         
@@ -133,5 +115,4 @@ public sealed class Plugin : IDalamudPlugin
     }
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
-    public void ToggleMainUI() => MainWindow.Toggle();
 }

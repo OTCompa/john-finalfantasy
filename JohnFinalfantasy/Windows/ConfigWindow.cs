@@ -20,12 +20,12 @@ public class ConfigWindow : Window, IDisposable
     // We give this window a constant ID using ###
     // This allows for labels being dynamic, like "{FPS Counter}fps###XYZ counter window",
     // and the window ID will always be "###XYZ counter window" for ImGui
-    public ConfigWindow(Plugin plugin) : base("A Wonderful Configuration Window###With a constant ID")
+    public ConfigWindow(Plugin plugin) : base("John Finalfantasy###With a constant ID")
     {
         this.plugin = plugin;
-        Flags = ImGuiWindowFlags.NoCollapse;
+        Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(450, 420);
+        Size = new Vector2(400, 365);
 
         Configuration = plugin.Configuration;
         for ( int i = 0; i < 8; i++ )
@@ -79,12 +79,14 @@ public class ConfigWindow : Window, IDisposable
             this.plugin.Obscurer.ResetPartyList();
             this.plugin.Obscurer.partySize = -1;
         }
-
+        ImGui.Separator();
         using var partyNameTable = ImRaii.Table("fps_input_settings", 2);
         for (var i = 0; i < 8; i++)
         {
             ImGui.PushID(i);
             ImGui.TableNextColumn();
+            ImGui.Text("\t" + (i + 1).ToString() + "\t");
+            ImGui.SameLine();
             ImGui.Text("First");
             ImGui.SameLine();
             ImGui.InputText("##First", ref firstName[i], 20);
@@ -105,9 +107,10 @@ public class ConfigWindow : Window, IDisposable
                 var last = lastName[i];
                 var name = first + " " + last;
                 Configuration.PartyNames[i] = name;
-                Configuration.Save();
-                this.plugin.UpdateParty("", "");
             }
+            Configuration.Save();
+            this.plugin.UpdateParty("", "");
+            this.Toggle();
         }
         
     }
