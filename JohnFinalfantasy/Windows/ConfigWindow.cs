@@ -109,7 +109,14 @@ public class ConfigWindow : Window, IDisposable
                 Configuration.PartyNames[i] = name;
             }
             Configuration.Save();
-            this.plugin.UpdateParty("", "");
+            if (Configuration.EnableForSelf)
+            {
+                this.plugin.UpdateSelf("", "");
+            }
+            if (Configuration.EnableForParty)
+            {
+                this.plugin.UpdateParty("", "");
+            }
             this.Toggle();
         }
         

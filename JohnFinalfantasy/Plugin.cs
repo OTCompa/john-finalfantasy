@@ -41,11 +41,12 @@ public sealed class Plugin : IDalamudPlugin
 
         WindowSystem.AddWindow(ConfigWindow);
 
+        /*
         CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
         {
             HelpMessage = "test debug"
         });
-
+        */
         CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
         {
             HelpMessage = "update plist"
@@ -75,7 +76,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/updateself");
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
-        CommandManager.RemoveHandler("/testcommand");
+        //CommandManager.RemoveHandler("/testcommand");
         
         Obscurer.Dispose();
         Functions.Dispose();
