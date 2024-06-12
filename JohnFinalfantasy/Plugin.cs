@@ -47,6 +47,12 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "test debug"
         });
         */
+
+        CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings) { 
+            HelpMessage = "Toggle John Finalfantasy's config UI"
+        });
+
+
         CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
         {
             HelpMessage = "update plist"
@@ -76,6 +82,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/updateself");
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
+        CommandManager.RemoveHandler("/jfconfig");
         //CommandManager.RemoveHandler("/testcommand");
         
         Obscurer.Dispose();
@@ -113,6 +120,10 @@ public sealed class Plugin : IDalamudPlugin
     internal void UpdateSelf(string command, string args)
     {
         this.Obscurer.UpdateSelf();
+    }
+    internal void ToggleSettings(string command, string args)
+    {
+        ToggleConfigUI();
     }
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();

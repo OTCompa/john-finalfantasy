@@ -13,9 +13,6 @@ namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
     private Plugin Plugin { get; }
-
-    private Stopwatch UpdateTimer { get; } = new();
-    private IReadOnlySet<string> Friends { get; set; }
     private Dictionary<string, string> replacements { get; set; }
     private Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String> currentlySwapped { get; set; }
     internal bool stateChanged { get; set; } = false;
@@ -85,7 +82,6 @@ internal unsafe class Obscurer : IDisposable {
                 }
             }
         }
-        this.UpdateTimer.Start();
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
@@ -114,10 +110,6 @@ internal unsafe class Obscurer : IDisposable {
     }
     private void OnLogin()
     {
-        if (!Plugin.Configuration.EnableForParty)
-        {
-            return;
-        }
         if (this.Plugin.Configuration.EnableForSelf)
         {
             UpdateSelf();
@@ -145,13 +137,20 @@ internal unsafe class Obscurer : IDisposable {
         }
         this.crossRealm = isCrossRealm;
         this.partySize = partySize;
+        // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
-            UpdateSelf();
+            if (!UpdateSelf())
+            {
+                this.partySize = -1;
+            }
         }
         if (this.Plugin.Configuration.EnableForParty)
         {
-            UpdatePartyList();
+            if (!UpdatePartyList(partySize))
+            {
+                this.partySize = -1;
+            }
         }
     }
     
@@ -226,7 +225,7 @@ internal unsafe class Obscurer : IDisposable {
                 {
                     foreach (var pMember in Service.PartyList)
                     {
-                        if (pMember.ObjectId == player.ObjectId)
+                        if (player == null || pMember.ObjectId == player.ObjectId)
                         {
                             continue;
                         }
@@ -247,15 +246,19 @@ internal unsafe class Obscurer : IDisposable {
         return changed;
     }
 
-    internal unsafe void UpdateSelf()
+    internal unsafe bool UpdateSelf()
     {
         var player = Service.ClientState.LocalPlayer;
         var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         if (pListHud == null)
         {
-            return;
+            return false;
         }
         var pMemberHud = &pListHud->PartyMember.PartyMember0;
+        if (player == null)
+        {
+            return false;
+        }
         string name = player.Name.ToString();
         var world = player.HomeWorld.GameData.Name.ToString();
         var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
@@ -265,9 +268,11 @@ internal unsafe class Obscurer : IDisposable {
         currentlySwapped[name + world] = textNode;
         textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
         stateChanged = true;
+        return true;
     }
-    internal unsafe void UpdatePartyList()
+    internal unsafe bool UpdatePartyList(int expected = 0)
     {
+        var ret = true;
         var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
         if (isCrossRealm)
         {
@@ -289,7 +294,7 @@ internal unsafe class Obscurer : IDisposable {
                 Service.PluginLog.Info("Cross-world party updating: " + name + " " + world);
                 currentlySwapped[name + world] = textNode;
                 textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
-                pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
+                //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
                 pMemberHud++;
                 pMemberIP++;
             }
@@ -301,12 +306,18 @@ internal unsafe class Obscurer : IDisposable {
             if (pListHud == null)
             {
                 Service.PluginLog.Debug("HUD is null");
-                return;
+                return false;
             }
             else
             {
                 var pMemberHud = &pListHud->PartyMember.PartyMember0;
                 var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
+                var numMembers = pListHud->MemberCount;
+
+                if (numMembers < expected)
+                {
+                    ret = false;
+                }
                 pMemberHud++;
                 pMemberAgentHud++;
                 for (int i = 1; i < pListHud->MemberCount; i++)
@@ -324,17 +335,21 @@ internal unsafe class Obscurer : IDisposable {
                         }
                     }
                     replacements[name+world] = this.Plugin.Configuration.PartyNames[i];
-                    var textNode = pMemberHud->Name->NodeText;
-                    Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                    currentlySwapped[name + world] = textNode;
-                    textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
-                    pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
+                    if (ret)
+                    {
+                        var textNode = pMemberHud->Name->NodeText;
+                        Service.PluginLog.Info("Local party updating: " + name + " " + world);
+                        currentlySwapped[name + world] = textNode;
+                        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
+                    }
+                    //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
                     pMemberHud++;
                     pMemberAgentHud++;
                 }
             }
         }
         stateChanged = true;
+        return ret;
     }
 
     internal unsafe void ResetPartyList()
