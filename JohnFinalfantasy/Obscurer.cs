@@ -336,7 +336,7 @@ internal unsafe class Obscurer : IDisposable {
                             break;
                         }
                     }
-                    replacements[name+world] = this.Plugin.Configuration.PartyNames[i];
+                    replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
                     if (ret)
                     {
                         var textNode = pMemberHud->Name->NodeText;
