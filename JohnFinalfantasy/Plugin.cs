@@ -6,6 +6,9 @@ using Dalamud.Plugin.Services;
 using JohnFinalfantasy.Windows;
 using System.Runtime.InteropServices;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 
 namespace JohnFinalfantasy;
 
@@ -61,6 +64,11 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Toggle the obscurer for your party"
         });
 
+        CommandManager.AddHandler("/jfall", new CommandInfo(SetAll)
+        {
+            HelpMessage = "Turn the obscurer on/off.\n Example: \"/jfall on\" or \"jfall off\""
+        });
+
         CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
         {
             HelpMessage = "Force update the party list"
@@ -90,6 +98,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/updateself");
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
+        CommandManager.RemoveHandler("/jfall");
         CommandManager.RemoveHandler("/jfparty");
         CommandManager.RemoveHandler("/jfself");
         CommandManager.RemoveHandler("/jfconfig");
@@ -116,7 +125,7 @@ public sealed class Plugin : IDalamudPlugin
             Service.PluginLog.Debug(nameAH + " " + objectIdAH.ToString());
         }
     }
-   
+
     private void ToggleSelf(string command, string args)
     {
         this.Configuration.EnableForSelf = !this.Configuration.EnableForSelf;
@@ -135,6 +144,30 @@ public sealed class Plugin : IDalamudPlugin
         this.Obscurer.partySize = -1;
     }
 
+    private void SetAll(string command, string args)
+    {
+        var splitArgs = args.Split(' ');
+        switch (splitArgs[0])
+        {
+            case "on":
+                this.Configuration.EnableForSelf = true;
+                this.Configuration.EnableForParty = true;
+                this.Obscurer.ResetPartyList();
+                this.Obscurer.partySize = -1;
+                break;
+            case "off":
+                this.Configuration.EnableForSelf = false;
+                this.Configuration.EnableForParty = false;
+                this.Obscurer.ResetPartyList();
+                this.Obscurer.partySize = -1;
+                break;
+            default:
+                var chatMsg = new SeString(new TextPayload("Invalid argument."));
+                Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+                break;
+        }
+    }
+
     internal void UpdateParty(string command, string args)
     {
         this.Obscurer.UpdatePartyList();
@@ -149,10 +182,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         this.Obscurer.UpdateSelf();
     }
-    internal void ToggleSettings(string command, string args)
-    {
-        ToggleConfigUI();
-    }
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
+    internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();
+    private void ToggleWho(string command, string args) => WhoWindow.Toggle();
 }

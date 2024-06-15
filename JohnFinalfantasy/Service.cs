@@ -14,6 +14,7 @@ internal class Service
     [PluginService] internal static IClientState ClientState { get; set; }
     [PluginService] internal static IFramework Framework { get; set; }
     [PluginService] internal static IGameGui GameGui { get; set; }
+    [PluginService] internal static IChatGui ChatGUi { get; set; }
     internal unsafe static AgentHUD* AgentHud => AgentModule.Instance()->GetAgentHUD();
 
     internal static void Initialize(DalamudPluginInterface pluginInterface)
