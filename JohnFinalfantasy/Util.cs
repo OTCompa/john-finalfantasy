@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace JohnFinalfantasy;
 
@@ -18,6 +20,23 @@ internal static class Util {
 
                     break;
             }
+        }
+    }
+
+    internal static string IndexName(string name, string world)
+    {
+        return name + " " + world;
+    }
+
+    internal static string GetWorld(short worldId)
+    {
+        string? world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldId)?.Name.ToString();
+        if (world == null)
+        {
+            return "Unknown";
+        } else
+        {
+            return world;
         }
     }
 

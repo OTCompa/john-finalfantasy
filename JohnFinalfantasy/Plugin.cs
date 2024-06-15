@@ -10,6 +10,9 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ImGuiNET;
+using static Lumina.Data.Parsing.Uld.NodeData;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace JohnFinalfantasy;
 
@@ -47,12 +50,12 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
 
-        /*
+        
         CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
         {
             HelpMessage = "test debug"
         });
-        */
+        
 
         CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings)
         {
@@ -111,8 +114,9 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/jfall");
         CommandManager.RemoveHandler("/jfparty");
         CommandManager.RemoveHandler("/jfself");
+        CommandManager.RemoveHandler("/jfwho");
         CommandManager.RemoveHandler("/jfconfig");
-        //CommandManager.RemoveHandler("/testcommand");
+        CommandManager.RemoveHandler("/testcommand");
 
         Obscurer.Dispose();
         Functions.Dispose();
@@ -123,17 +127,17 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void TestCommand(string command, string args)
     {
-
-        var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-        foreach (var member in Service.PartyList)
-        {
-            var objectId = member.ObjectId;
-            string name = member.Name.ToString();
-            Service.PluginLog.Debug(name + " " + objectId.ToString());
-            var objectIdAH = pMemberAgentHud->ObjectId;
-            string nameAH = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-            Service.PluginLog.Debug(nameAH + " " + objectIdAH.ToString());
-        }
+        /*
+        var hudParty = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+        var textNode = hudParty->PartyMember[1].Name->NodeText;
+        Service.PluginLog.Debug(textNode.ToString());
+        var matched = this.Obscurer.MatchHudTextNode(hudParty->PartyMember[1].Name->NodeText);
+        Service.PluginLog.Debug("test2");
+        var matches = matched[0].Groups;
+        Service.PluginLog.Debug(matches[1].Value);
+        Service.PluginLog.Debug(matches[2].Value);
+        Service.PluginLog.Debug("test3");
+        */
     }
 
     private void ToggleSelf(string command, string args)
