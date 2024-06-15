@@ -52,20 +52,28 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Toggle John Finalfantasy's config UI"
         });
 
+        CommandManager.AddHandler("/jfself", new CommandInfo(ToggleSelf){
+            HelpMessage = "Toggle the obscurer for yourself"
+        });
+
+        CommandManager.AddHandler("/jfparty", new CommandInfo(ToggleParty)
+        {
+            HelpMessage = "Toggle the obscurer for your party"
+        });
 
         CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
         {
-            HelpMessage = "update plist"
+            HelpMessage = "Force update the party list"
         });
-        
+
         CommandManager.AddHandler("/resetplist", new CommandInfo(ResetParty)
         {
-            HelpMessage = "reset plist"
+            HelpMessage = "Force reset the party list"
         });
 
         CommandManager.AddHandler("/updateself", new CommandInfo(UpdateSelf)
         {
-            HelpMessage = "update self"
+            HelpMessage = "Force update yourself"
         });
 
         PluginInterface.UiBuilder.Draw += DrawUI;
@@ -82,6 +90,8 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/updateself");
         CommandManager.RemoveHandler("/resetplist");
         CommandManager.RemoveHandler("/updateplist");
+        CommandManager.RemoveHandler("/jfparty");
+        CommandManager.RemoveHandler("/jfself");
         CommandManager.RemoveHandler("/jfconfig");
         //CommandManager.RemoveHandler("/testcommand");
         
@@ -107,6 +117,24 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
    
+    private void ToggleSelf(string command, string args)
+    {
+        this.Configuration.EnableForSelf = !this.Configuration.EnableForSelf;
+        this.Configuration.Save();
+        this.Obscurer.ResetPartyList();
+        this.Obscurer.partySize = -1;
+
+    }
+
+    private void ToggleParty (string command, string args)
+    {
+        this.Configuration.EnableForParty = !this.Configuration.EnableForParty;
+
+        this.Configuration.Save();
+        this.Obscurer.ResetPartyList();
+        this.Obscurer.partySize = -1;
+    }
+
     internal void UpdateParty(string command, string args)
     {
         this.Obscurer.UpdatePartyList();
