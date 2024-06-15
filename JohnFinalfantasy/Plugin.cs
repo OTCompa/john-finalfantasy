@@ -9,6 +9,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using ImGuiNET;
 
 namespace JohnFinalfantasy;
 
@@ -19,6 +20,7 @@ public sealed class Plugin : IDalamudPlugin
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
+    private WhoWindow WhoWindow { get; init; }
 
     private Service service { get; init; }
     internal GameFunctions Functions { get; init; }
@@ -41,8 +43,9 @@ public sealed class Plugin : IDalamudPlugin
         this.Obscurer = new Obscurer(this);
 
         ConfigWindow = new ConfigWindow(this);
-
+        WhoWindow = new WhoWindow(this);
         WindowSystem.AddWindow(ConfigWindow);
+        WindowSystem.AddWindow(WhoWindow);
 
         /*
         CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
@@ -51,11 +54,18 @@ public sealed class Plugin : IDalamudPlugin
         });
         */
 
-        CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings) { 
+        CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings)
+        {
             HelpMessage = "Toggle John Finalfantasy's config UI"
         });
 
-        CommandManager.AddHandler("/jfself", new CommandInfo(ToggleSelf){
+        CommandManager.AddHandler("/jfwho", new CommandInfo(ToggleWho)
+        {
+            HelpMessage = "Toggle the who's who UI"
+        });
+
+        CommandManager.AddHandler("/jfself", new CommandInfo(ToggleSelf)
+        {
             HelpMessage = "Toggle the obscurer for yourself"
         });
 
@@ -103,7 +113,7 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler("/jfself");
         CommandManager.RemoveHandler("/jfconfig");
         //CommandManager.RemoveHandler("/testcommand");
-        
+
         Obscurer.Dispose();
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();
@@ -113,7 +123,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void TestCommand(string command, string args)
     {
-        
+
         var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
         foreach (var member in Service.PartyList)
         {
@@ -135,7 +145,7 @@ public sealed class Plugin : IDalamudPlugin
 
     }
 
-    private void ToggleParty (string command, string args)
+    private void ToggleParty(string command, string args)
     {
         this.Configuration.EnableForParty = !this.Configuration.EnableForParty;
 
@@ -172,12 +182,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         this.Obscurer.UpdatePartyList();
     }
-    
+
     internal void ResetParty(string command, string args)
     {
         this.Obscurer.ResetPartyList();
     }
-    
+
     internal void UpdateSelf(string command, string args)
     {
         this.Obscurer.UpdateSelf();
@@ -185,5 +195,5 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();
-    private void ToggleWho(string command, string args) => WhoWindow.Toggle();
+    private void ToggleWho(string command, string args) => WhoWindow.ToggleWho();
 }

@@ -17,6 +17,7 @@ public class Configuration : IPluginConfiguration
     public bool EnableForSelf {  get; set; } = false;
     public bool EnableForParty { get; set; } = false;
     public List<string> PartyNames { get; set; } = new List<string>();
+    public bool ShowWho { get; set; } = false;
     // the below exist just to make saving less cumbersome
     [NonSerialized]
     private DalamudPluginInterface? PluginInterface;

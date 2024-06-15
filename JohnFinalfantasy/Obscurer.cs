@@ -13,7 +13,7 @@ namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
     private Plugin Plugin { get; }
-    private Dictionary<string, string> replacements { get; set; }
+    internal Dictionary<string, string> replacements { get; set; }
     private Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String> currentlySwapped { get; set; }
     internal bool stateChanged { get; set; } = false;
     internal int partySize { get; set; } = 0;
@@ -44,7 +44,7 @@ internal unsafe class Obscurer : IDisposable {
                     var worldShort = pMember->HomeWorld;
                     var world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldShort)?.Name.ToString();
 
-                    replacements[name + world] = this.Plugin.Configuration.PartyNames[i];
+                    replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
                     pMember++;
                 }
             }
@@ -75,7 +75,7 @@ internal unsafe class Obscurer : IDisposable {
                                 break;
                             }
                         }
-                        replacements[name + world] = this.Plugin.Configuration.PartyNames[i];
+                        replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
                         pMemberHud++;
                         pMemberAgentHud++;
                     }
@@ -137,6 +137,8 @@ internal unsafe class Obscurer : IDisposable {
         }
         this.crossRealm = isCrossRealm;
         this.partySize = partySize;
+        this.replacements.Clear();
+        this.currentlySwapped.Clear();
         // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
@@ -262,11 +264,11 @@ internal unsafe class Obscurer : IDisposable {
         string name = player.Name.ToString();
         var world = player.HomeWorld.GameData.Name.ToString();
         var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
-        replacements[name + world] = this.Plugin.Configuration.PartyNames[0];
+        replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[0];
         var textNode = pMemberHud->Name->NodeText;
         Service.PluginLog.Info("Self updating: " + name + " " + world);
-        currentlySwapped[name + world] = textNode;
-        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
+        currentlySwapped[name + " " + world] = textNode;
+        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + " " + world]);
         stateChanged = true;
         return true;
     }
@@ -289,11 +291,11 @@ internal unsafe class Obscurer : IDisposable {
                 var worldShort = pMemberIP->HomeWorld;
                 string world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldShort)?.Name.ToString();
                 var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
-                replacements[name + world] = this.Plugin.Configuration.PartyNames[i];
+                replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
                 var textNode = pMemberHud->Name->NodeText;
                 Service.PluginLog.Info("Cross-world party updating: " + name + " " + world);
-                currentlySwapped[name + world] = textNode;
-                textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
+                currentlySwapped[name + " " + world] = textNode;
+                textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + " " + world]);
                 //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
                 pMemberHud++;
                 pMemberIP++;
@@ -339,8 +341,8 @@ internal unsafe class Obscurer : IDisposable {
                     {
                         var textNode = pMemberHud->Name->NodeText;
                         Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                        currentlySwapped[name + world] = textNode;
-                        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + world]);
+                        currentlySwapped[name + " " + world] = textNode;
+                        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + " " + world]);
                     }
                     //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
                     pMemberHud++;
@@ -369,7 +371,7 @@ internal unsafe class Obscurer : IDisposable {
                 var worldShort = pMemberIP->HomeWorld;
                 string world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldShort)?.Name.ToString();
                 var textNode = pMemberHud->Name->NodeText;
-                currentlySwapped[name + world] = textNode;
+                currentlySwapped[name + " " + world] = textNode;
                 pMemberHud++;
                 pMemberIP++;
             }
@@ -401,7 +403,7 @@ internal unsafe class Obscurer : IDisposable {
                         }
                     }
                     var textNode = pMemberHud->Name->NodeText;
-                    currentlySwapped[name + world] = textNode;
+                    currentlySwapped[name + " " + world] = textNode;
                     pMemberHud++;
                     pMemberAgentHud++;
                 }
@@ -420,7 +422,7 @@ internal unsafe class Obscurer : IDisposable {
                 string name = Marshal.PtrToStringUTF8((nint)pMember->Name);
                 var worldShort = pMember->HomeWorld;
                 string world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldShort)?.Name.ToString();
-                if (currentlySwapped.TryGetValue(name + world, out var textNode))
+                if (currentlySwapped.TryGetValue(name + " " + world, out var textNode))
                 {
                     Service.PluginLog.Info("Cross-world party resetting: " + name + " " + world);
                     string level = textNode.ToString().Split(' ', 2)[0];
@@ -439,7 +441,7 @@ internal unsafe class Obscurer : IDisposable {
                     string name = player.Name.ToString();
                     string world = player.HomeWorld.GameData.Name.ToString();
                     Service.PluginLog.Info("Local party resetting self: " + name + " " + world);
-                    if (currentlySwapped.TryGetValue(name + world, out var textNode))
+                    if (currentlySwapped.TryGetValue(name + " " + world, out var textNode))
                     {
                         string level = textNode.ToString().Split(' ', 2)[0];
                         textNode.SetString(level + ' ' + name);
@@ -452,7 +454,7 @@ internal unsafe class Obscurer : IDisposable {
                 string name = pMember.Name.ToString();
                 string world = pMember.World.GameData.Name.ToString();
                 Service.PluginLog.Info("Local party resetting: " + name + " " + world);
-                if (currentlySwapped.TryGetValue(name + world, out var textNode))
+                if (currentlySwapped.TryGetValue(name + " " + world, out var textNode))
                 {
                     string level = textNode.ToString().Split(' ', 2)[0];
                     textNode.SetString(level + ' ' + name);
@@ -471,7 +473,7 @@ internal unsafe class Obscurer : IDisposable {
             return null;
         }
 
-        if (this.replacements.TryGetValue(name + world, out var replacement))
+        if (this.replacements.TryGetValue(name + " " + world, out var replacement))
         {
             return replacement;
         }
