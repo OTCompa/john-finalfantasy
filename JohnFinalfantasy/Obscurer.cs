@@ -431,6 +431,22 @@ internal unsafe class Obscurer : IDisposable {
         }
         else
         {
+            if (Service.PartyList.Length == 0)
+            {
+                var player = Service.ClientState.LocalPlayer;
+                if (player != null)
+                {
+                    string name = player.Name.ToString();
+                    string world = player.HomeWorld.GameData.Name.ToString();
+                    Service.PluginLog.Info("Local party resetting self: " + name + " " + world);
+                    if (currentlySwapped.TryGetValue(name + world, out var textNode))
+                    {
+                        string level = textNode.ToString().Split(' ', 2)[0];
+                        textNode.SetString(level + ' ' + name);
+
+                    }
+                }
+            }
             foreach (var pMember in Service.PartyList)
             {
                 string name = pMember.Name.ToString();
@@ -446,7 +462,7 @@ internal unsafe class Obscurer : IDisposable {
         }
         stateChanged = false;
     }
-
+        
 
     internal string? GetReplacement(string name, string world)
     {
