@@ -25,10 +25,19 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
     private WhoWindow WhoWindow { get; init; }
-
     private Service service { get; init; }
     internal GameFunctions Functions { get; init; }
     internal Obscurer Obscurer { get; init; }
+
+    private const string CommandConfig = "/jfconfig";
+    private const string CommandWho = "jfconfig";
+    private const string CommandToggleSelf = "/jfself";
+    private const string CommandToggleParty = "/jfparty";
+    private const string CommandToggleAll = "/jfall";
+    private const string DebugCommandUpdateParty = "/updateplist";
+    private const string DebugCommandUpdateSelf = "/updateself";
+    private const string DebugCommandResetParty = "/resetplist";
+
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
         [RequiredVersion("1.0")] ICommandManager commandManager,
@@ -51,52 +60,53 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
 
-        
+        /*
         CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
         {
             HelpMessage = "test debug"
         });
-        
+        */
 
-        CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings)
+        CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
             HelpMessage = "Toggle John Finalfantasy's config UI"
         });
 
-        CommandManager.AddHandler("/jfwho", new CommandInfo(ToggleWho)
+        CommandManager.AddHandler(CommandWho, new CommandInfo(ToggleWho)
         {
             HelpMessage = "Toggle the who's who UI"
         });
 
-        CommandManager.AddHandler("/jfself", new CommandInfo(ToggleSelf)
+        CommandManager.AddHandler(CommandToggleSelf, new CommandInfo(ToggleSelf)
         {
             HelpMessage = "Toggle the obscurer for yourself"
         });
 
-        CommandManager.AddHandler("/jfparty", new CommandInfo(ToggleParty)
+        CommandManager.AddHandler(CommandToggleParty, new CommandInfo(ToggleParty)
         {
             HelpMessage = "Toggle the obscurer for your party"
         });
 
-        CommandManager.AddHandler("/jfall", new CommandInfo(SetAll)
+        CommandManager.AddHandler(CommandToggleAll, new CommandInfo(SetAll)
         {
             HelpMessage = "Turn the obscurer on/off.\n Example: \"/jfall on\" or \"jfall off\""
         });
 
-        CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
+        CommandManager.AddHandler(DebugCommandUpdateSelf, new CommandInfo(UpdateSelf)
         {
-            HelpMessage = "Force update the party list"
+            HelpMessage = "Force update yourself, debug command"
         });
 
-        CommandManager.AddHandler("/resetplist", new CommandInfo(ResetParty)
+        CommandManager.AddHandler(DebugCommandUpdateParty, new CommandInfo(UpdateParty)
         {
-            HelpMessage = "Force reset the party list"
+            HelpMessage = "Force update the party list, debug command"
         });
 
-        CommandManager.AddHandler("/updateself", new CommandInfo(UpdateSelf)
+        CommandManager.AddHandler(DebugCommandResetParty, new CommandInfo(ResetParty)
         {
-            HelpMessage = "Force update yourself"
+            HelpMessage = "Force reset the party list, debug command"
         });
+
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -109,15 +119,15 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
 
-        CommandManager.RemoveHandler("/updateself");
-        CommandManager.RemoveHandler("/resetplist");
-        CommandManager.RemoveHandler("/updateplist");
-        CommandManager.RemoveHandler("/jfall");
-        CommandManager.RemoveHandler("/jfparty");
-        CommandManager.RemoveHandler("/jfself");
-        CommandManager.RemoveHandler("/jfwho");
-        CommandManager.RemoveHandler("/jfconfig");
-        CommandManager.RemoveHandler("/testcommand");
+        CommandManager.RemoveHandler(DebugCommandResetParty);
+        CommandManager.RemoveHandler(DebugCommandUpdateParty);
+        CommandManager.RemoveHandler(DebugCommandUpdateSelf);
+        CommandManager.RemoveHandler(CommandToggleAll);
+        CommandManager.RemoveHandler(CommandToggleParty);
+        CommandManager.RemoveHandler(CommandToggleSelf);
+        CommandManager.RemoveHandler(CommandWho);
+        CommandManager.RemoveHandler(CommandConfig);
+        //CommandManager.RemoveHandler("/testcommand");
 
         Obscurer.Dispose();
         Functions.Dispose();

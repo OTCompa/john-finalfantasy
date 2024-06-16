@@ -56,10 +56,14 @@ public class ConfigWindow : Window, IDisposable
     public override void Draw()
     {
         var enable = Configuration.Enabled;
-        if (ImGui.Checkbox("Enable", ref enable))
+        if (ImGui.Checkbox("Enable for all text", ref enable))
         {
             Configuration.Enabled = enable;
             Configuration.Save();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+        {
+            ImGui.SetTooltip("All text like chatbox, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
         }
 
         var self = Configuration.EnableForSelf;
