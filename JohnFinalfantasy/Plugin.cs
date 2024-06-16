@@ -13,6 +13,7 @@ using ImGuiNET;
 using static Lumina.Data.Parsing.Uld.NodeData;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Microsoft.VisualBasic;
 
 namespace JohnFinalfantasy;
 
@@ -127,6 +128,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void TestCommand(string command, string args)
     {
+        var msg = new SeString(new TextPayload("\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002?\u0003"));
+        Service.ChatGUi.Print(new XivChatEntry { Message = msg, Type = XivChatType.Echo });
         /*
         var hudParty = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         var textNode = hudParty->PartyMember[1].Name->NodeText;

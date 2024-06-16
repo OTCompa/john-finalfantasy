@@ -32,7 +32,7 @@ internal unsafe class Obscurer : IDisposable {
         replacements = new Dictionary<string, string>();
         currentlySwapped = new Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String>();
 
-        PmemberHudRegex = new Regex("^([][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
+        PmemberHudRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
 
         InfoProxyCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
         if (this.Plugin.Configuration.EnableForSelf)
@@ -44,24 +44,28 @@ internal unsafe class Obscurer : IDisposable {
             var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
             if (isCrossRealm)
             {
-                var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
+                var crossRealmGroup = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
                 var numMembers = (int)crossRealmGroup->GroupMemberCount;
-                var pMember = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmMember*)crossRealmGroup->GroupMembers;
+                var pMember = (CrossRealmMember*)crossRealmGroup->GroupMembers;
                 pMember++;
                 for (int i = 1; i < numMembers; i++)
                 {
-                    string name = Marshal.PtrToStringUTF8((nint)pMember->Name);
+                    string? name = Marshal.PtrToStringUTF8((nint)pMember->Name);
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        continue;
+                    }
                     var worldShort = pMember->HomeWorld;
                     string world = Util.GetWorld(worldShort);
-
-                    replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
+                    string indexName = Util.IndexName(name, world);
+                    replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
                     pMember++;
                 }
             }
             else
             {
                 var pListAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+                var pListHud = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
                 if (pListHud == null)
                 {
                     Service.PluginLog.Error("HUD is null");
@@ -75,17 +79,9 @@ internal unsafe class Obscurer : IDisposable {
                     for (int i = 1; i < pListHud->MemberCount; i++)
                     {
                         var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-                        string world = "Unassigned";
-                        var objectId = pMemberAgentHud->ObjectId;
-                        foreach (var member in Service.PartyList)
-                        {
-                            if (member.ObjectId == objectId)
-                            {
-                                world = member.World.GameData.Name.ToString();
-                                break;
-                            }
-                        }
-                        replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
+                        string world = FindObjectIdWorld(pMemberAgentHud->ObjectId);
+                        string indexName = Util.IndexName(name, world);
+                        replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
                         pMemberHud++;
                         pMemberAgentHud++;
                     }
@@ -287,7 +283,7 @@ internal unsafe class Obscurer : IDisposable {
         return true;
     }
 
-    private string GetPrefix(Utf8String textNode)
+    private string? GetPrefix(Utf8String textNode)
     {
         MatchCollection matched = MatchHudTextNode(textNode);
         if (matched.Count > 0)
@@ -296,22 +292,19 @@ internal unsafe class Obscurer : IDisposable {
             return matches[1].Value;
         }
         Service.PluginLog.Error("Regex failed for: " + textNode);
-        return "";
+        return null;
     }
 
-    private void UpdatePartyListHud(string name, string world, Utf8String textNode, int pos)
+    private void UpdateCRPartyList(AddonPartyList hudParty)
     {
-        string prefix = GetPrefix(textNode);
-        var indexName = Util.IndexName(name, world);
-        replacements[indexName] = this.Plugin.Configuration.PartyNames[pos];
-        currentlySwapped[indexName] = textNode;
-        textNode.SetString(prefix + replacements[indexName]);
-    }
-    private void UpdateCRPartyList()
-    {
+        int i = 0;
+        if (!this.Plugin.Configuration.EnableForSelf)
+        {
+            i++;
+        }
         var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        for (int i = 0; i < crParty->GroupMemberCount; i++)
+        var numMembers = (int)crParty->GroupMemberCount;
+        for (; i < numMembers; i++)
         {
             var pMember = crParty->GroupMembersSpan[i];
             string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
@@ -320,242 +313,117 @@ internal unsafe class Obscurer : IDisposable {
                 continue;
             }
             var worldShort = pMember.HomeWorld;
-            var world = Util.GetWorld(worldShort);
+            string world = Util.GetWorld(worldShort);
 
             Service.PluginLog.Info("Cross-world party updating: " + name + " " + world);
-            UpdatePartyListHud(name, world, hudParty->PartyMember[i].Name->NodeText, i);
+            string indexName = Util.IndexName(name, world);
+            var textNode = hudParty.PartyMember[i].Name->NodeText;
+            string? prefix = GetPrefix(textNode);
+            if (string.IsNullOrEmpty(prefix))
+            {
+                continue;
+            }
+            replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
+            currentlySwapped[indexName] = textNode;
+            textNode.SetString(prefix + replacements[indexName]);
         }
     }
 
-    // TODO: check with pets or trusts
-    private bool UpdateLocalPartyList(int expected)
+    internal unsafe bool UpdatePartyList(int expected = 0)
     {
         var ret = true;
-        var localParty = Service.AgentHud;
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         if (hudParty == null)
         {
-            Service.PluginLog.Debug("HUD is null");
+            Service.PluginLog.Error("HUD is null");
             return false;
+        }
+        if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
+        {
+            int i = 0;
+            if (!this.Plugin.Configuration.EnableForSelf)
+            {
+                i = 1;
+            }
+            var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
+            var numMembers = (int)crParty->GroupMemberCount;
+            for (; i < numMembers; i++)
+            {
+                var pMember = crParty->GroupMembersSpan[i];
+                string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+                if (string.IsNullOrEmpty(name))
+                {
+                    continue;
+                }
+                var worldShort = pMember.HomeWorld;
+                string world = Util.GetWorld(worldShort);
+
+                Service.PluginLog.Info("Cross-world party updating: " + name + " " + world);
+                string indexName = Util.IndexName(name, world);
+                var textNode = hudParty->PartyMember[i].Name->NodeText;
+                string? prefix = GetPrefix(textNode);
+                if (string.IsNullOrEmpty(prefix))
+                {
+                    continue;
+                }
+                replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
+                currentlySwapped[indexName] = textNode;
+                textNode.SetString(prefix + replacements[indexName]);
+            }
         }
         else
         {
-            
-            var numLoadedMembers = hudParty->MemberCount;
-            if (numLoadedMembers < expected)
-            {
-                ret = false;
-            }
-
             var player = Service.ClientState.LocalPlayer;
             if (player != null)
             {
                 string name = player.Name.ToString();
                 string world = player.HomeWorld.GameData!.Name.ToString();
-                UpdatePartyListHud(name, world, hudParty->PartyMember[0].Name->NodeText, 0);
-            }
-
-            for (int i = 1; i < numLoadedMembers; i++)
-            {
-                var pMember = localParty->PartyMemberListSpan[i];
-                string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
-                if (string.IsNullOrEmpty(name)) {
-                    continue;
-                }
-                string world = FindObjectIdWorld(pMember.ObjectId);
-
-                //UpdatePartyListHud(name, world, hudParty->PartyMember[i].Name->NodeText, i);
-                var textNode = hudParty->PartyMember[i].Name->NodeText;
-                var indexName = Util.IndexName(name, world);
-                replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
-                if (ret)
+                var textNode = hudParty->PartyMember[0].Name->NodeText;
+                string? prefix = GetPrefix(textNode);
+                if (!string.IsNullOrEmpty(prefix))
                 {
-                    Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                    MatchCollection matched = MatchHudTextNode(textNode);
-                    var matches = matched[0].Groups;
-                    string prefix = matches[1].Value;
+                    string indexName = Util.IndexName(name, world);
+                    replacements[indexName] = this.Plugin.Configuration.PartyNames[0];
                     currentlySwapped[indexName] = textNode;
                     textNode.SetString(prefix + replacements[indexName]);
                 }
             }
-            
-            /*
-            var pListHud = hudParty;
-            var pMemberHud = &pListHud->PartyMember.PartyMember0;
-            var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-            var numMembers = pListHud->MemberCount;
 
+            var numMembers = hudParty->MemberCount;
+            var localParty = Service.AgentHud;
             if (numMembers < expected)
             {
                 ret = false;
             }
-            pMemberHud++;
-            pMemberAgentHud++;
-            for (int i = 1; i < pListHud->MemberCount; i++)
+            for (int i = 1; i < hudParty->MemberCount; i++)
             {
-                var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-                var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
-                string world = "Unassigned";
-                var objectId = pMemberAgentHud->ObjectId;
-                foreach (var member in Service.PartyList)
+                var pMember = localParty->PartyMemberListSpan[i];
+                string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+                if (string.IsNullOrEmpty(name))
                 {
-                    if (member.ObjectId == objectId)
-                    {
-                        world = member.World.GameData.Name.ToString();
-                        break;
-                    }
+                    continue;
                 }
-                replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
+                string world = FindObjectIdWorld(pMember.ObjectId);
+                var indexName = Util.IndexName(name, world);
+                replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
                 if (ret)
                 {
-                    var textNode = pMemberHud->Name->NodeText;
+                    var textNode = hudParty->PartyMember[i].Name->NodeText;
+                    string? prefix = GetPrefix(textNode);
+                    if (string.IsNullOrEmpty(prefix))
+                    {
+                        continue;
+                    }
                     Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                    currentlySwapped[name + " " + world] = textNode;
-                    textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + " " + world]);
-                }
-                //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
-                pMemberHud++;
-                pMemberAgentHud++;
-            }
-            */
-        }
-        return ret;
-    }
-
-    
-    /*
-    internal unsafe bool UpdatePartyList(int expected = 0)
-    {
-        var ret = true;
-        var isCrossRealm = InfoProxyCrossRealm->IsInCrossRealmParty != 0;
-        if (isCrossRealm)
-        {
-            UpdateCRPartyList();
-        }
-        else
-        {
-            //ret = UpdateLocalPartyList(expected);
-            
-            var pListAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-            var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-            if (pListHud == null)
-            {
-                Service.PluginLog.Debug("HUD is null");
-                return false;
-            }
-            else
-            {
-                var pMemberHud = &pListHud->PartyMember.PartyMember0;
-                var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                var numMembers = pListHud->MemberCount;
-
-                if (numMembers < expected)
-                {
-                    ret = false;
-                }
-                pMemberHud++;
-                pMemberAgentHud++;
-                for (int i = 1; i < pListHud->MemberCount; i++)
-                {
-                    var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-                    var textNode = pMemberHud->Name->NodeText;
-                    string world = "Unassigned";
-                    var objectId = pMemberAgentHud->ObjectId;
-                    foreach (var member in Service.PartyList)
-                    {
-                        if (member.ObjectId == objectId)
-                        {
-                            world = member.World.GameData!.Name.ToString();
-                            break;
-                        }
-                    }
-
-                    var indexName = Util.IndexName(name, world);
-                    replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
-                    if (ret)
-                    {
-                        Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                        MatchCollection matched = MatchHudTextNode(textNode);
-                        var matches = matched[0].Groups;
-                        string prefix = matches[1].Value;
-                        currentlySwapped[indexName] = textNode;
-                        textNode.SetString(prefix + replacements[indexName]);
-                    }
-                    //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
-                    pMemberHud++;
-                    pMemberAgentHud++;
-                }
-            
-            }
-            ////
-        }
-        stateChanged = true;
-        return ret;
-    }
-    */
-
-    
-    internal unsafe bool UpdatePartyList(int expected = 0)
-    {
-        var ret = true;
-        var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
-        if (isCrossRealm)
-        {
-            UpdateCRPartyList();
-        }
-        else
-        {
-            var pListAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-            var pListHud = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-            if (pListHud == null)
-            {
-                Service.PluginLog.Debug("HUD is null");
-                return false;
-            }
-            else
-            {
-                var pMemberHud = &pListHud->PartyMember.PartyMember0;
-                var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                var numMembers = pListHud->MemberCount;
-
-                if (numMembers < expected)
-                {
-                    ret = false;
-                }
-                pMemberHud++;
-                pMemberAgentHud++;
-                for (int i = 1; i < pListHud->MemberCount; i++)
-                {
-                    var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-                    var partyMemberGuiString = pMemberHud->Name->NodeText.ToString().Split(' ', 2);
-                    string world = "Unassigned";
-                    var objectId = pMemberAgentHud->ObjectId;
-                    foreach (var member in Service.PartyList)
-                    {
-                        if (member.ObjectId == objectId)
-                        {
-                            world = member.World.GameData.Name.ToString();
-                            break;
-                        }
-                    }
-                    replacements[name + " " + world] = this.Plugin.Configuration.PartyNames[i];
-                    if (ret)
-                    {
-                        var textNode = pMemberHud->Name->NodeText;
-                        Service.PluginLog.Info("Local party updating: " + name + " " + world);
-                        currentlySwapped[name + " " + world] = textNode;
-                        textNode.SetString(partyMemberGuiString[0] + ' ' + replacements[name + " " + world]);
-                    }
-                    //pMemberHud->Name->TextFlags2 = (byte)TextFlags2.Ellipsis;
-                    pMemberHud++;
-                    pMemberAgentHud++;
+                    currentlySwapped[indexName] = textNode;
+                    textNode.SetString(prefix + replacements[name + " " + world]);
                 }
             }
         }
         stateChanged = true;
         return ret;
     }
-    
+
 
     internal unsafe void ResetPartyList()
     {
@@ -580,7 +448,7 @@ internal unsafe class Obscurer : IDisposable {
         {
             var pMember = crParty.GroupMembersSpan[i];
             var name = Marshal.PtrToStringUTF8((nint)pMember.Name);
-            if (name == null)
+            if (string.IsNullOrEmpty(name))
             {
                 continue;
             }
@@ -588,7 +456,11 @@ internal unsafe class Obscurer : IDisposable {
             string indexName = Util.IndexName(name, Util.GetWorld(worldShort));
             if (currentlySwapped.TryGetValue(indexName, out var textNode))
             {
-                string prefix = GetPrefix(textNode);
+                string? prefix = GetPrefix(textNode);
+                if (string.IsNullOrEmpty(prefix))
+                {
+                    continue;
+                }
                 textNode.SetString(prefix + name);
             }
         }
