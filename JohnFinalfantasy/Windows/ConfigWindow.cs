@@ -40,26 +40,17 @@ public class ConfigWindow : Window, IDisposable
 
     }
 
-    public override void PreDraw()
-    {
-        // Flags must be added or removed before Draw() is being called, or they won't apply
-        if (Configuration.IsConfigWindowMovable)
-        {
-            Flags &= ~ImGuiWindowFlags.NoMove;
-        }
-        else
-        {
-            Flags |= ImGuiWindowFlags.NoMove;
-        }
-    }
-
     public override void Draw()
     {
         var enable = Configuration.Enabled;
-        if (ImGui.Checkbox("Enable", ref enable))
+        if (ImGui.Checkbox("Enable for all text", ref enable))
         {
             Configuration.Enabled = enable;
             Configuration.Save();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+        {
+            ImGui.SetTooltip("All text like chatbox, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
         }
 
         var self = Configuration.EnableForSelf;
@@ -80,7 +71,7 @@ public class ConfigWindow : Window, IDisposable
             this.plugin.Obscurer.partySize = -1;
         }
         ImGui.Separator();
-        using var partyNameTable = ImRaii.Table("fps_input_settings", 2);
+        using var partyNameTable = ImRaii.Table("PartyTable", 2);
         for (var i = 0; i < 8; i++)
         {
             ImGui.PushID(i);

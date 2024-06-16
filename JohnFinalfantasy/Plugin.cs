@@ -4,12 +4,9 @@ using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using JohnFinalfantasy.Windows;
-using System.Runtime.InteropServices;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using ImGuiNET;
 
 namespace JohnFinalfantasy;
 
@@ -17,18 +14,28 @@ public sealed class Plugin : IDalamudPlugin
 {
     private DalamudPluginInterface PluginInterface { get; init; }
     private ICommandManager CommandManager { get; init; }
+
     public Configuration Configuration { get; init; }
+    internal GameFunctions Functions { get; init; }
+    internal Obscurer Obscurer { get; init; }
+
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
     private WhoWindow WhoWindow { get; init; }
 
-    private Service service { get; init; }
-    internal GameFunctions Functions { get; init; }
-    internal Obscurer Obscurer { get; init; }
+
+    private const string CommandConfig = "/jfconfig";
+    private const string CommandWho = "jfconfig";
+    private const string CommandToggleSelf = "/jfself";
+    private const string CommandToggleParty = "/jfparty";
+    private const string CommandToggleAll = "/jfall";
+    private const string DebugCommandUpdateParty = "/updateplist";
+    private const string DebugCommandUpdateSelf = "/updateself";
+    private const string DebugCommandResetParty = "/resetplist";
+
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-        [RequiredVersion("1.0")] ICommandManager commandManager,
-        [RequiredVersion("1.0")] ITextureProvider textureProvider)
+        [RequiredVersion("1.0")] ICommandManager commandManager)
     {
 
         PluginInterface = pluginInterface;
@@ -54,45 +61,46 @@ public sealed class Plugin : IDalamudPlugin
         });
         */
 
-        CommandManager.AddHandler("/jfconfig", new CommandInfo(ToggleSettings)
+        CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
             HelpMessage = "Toggle John Finalfantasy's config UI"
         });
 
-        CommandManager.AddHandler("/jfwho", new CommandInfo(ToggleWho)
+        CommandManager.AddHandler(CommandWho, new CommandInfo(ToggleWho)
         {
             HelpMessage = "Toggle the who's who UI"
         });
 
-        CommandManager.AddHandler("/jfself", new CommandInfo(ToggleSelf)
+        CommandManager.AddHandler(CommandToggleSelf, new CommandInfo(ToggleSelf)
         {
             HelpMessage = "Toggle the obscurer for yourself"
         });
 
-        CommandManager.AddHandler("/jfparty", new CommandInfo(ToggleParty)
+        CommandManager.AddHandler(CommandToggleParty, new CommandInfo(ToggleParty)
         {
             HelpMessage = "Toggle the obscurer for your party"
         });
 
-        CommandManager.AddHandler("/jfall", new CommandInfo(SetAll)
+        CommandManager.AddHandler(CommandToggleAll, new CommandInfo(SetAll)
         {
             HelpMessage = "Turn the obscurer on/off.\n Example: \"/jfall on\" or \"jfall off\""
         });
 
-        CommandManager.AddHandler("/updateplist", new CommandInfo(UpdateParty)
+        CommandManager.AddHandler(DebugCommandUpdateSelf, new CommandInfo(UpdateSelf)
         {
-            HelpMessage = "Force update the party list"
+            HelpMessage = "Force update yourself, debug command"
         });
 
-        CommandManager.AddHandler("/resetplist", new CommandInfo(ResetParty)
+        CommandManager.AddHandler(DebugCommandUpdateParty, new CommandInfo(UpdateParty)
         {
-            HelpMessage = "Force reset the party list"
+            HelpMessage = "Force update the party list, debug command"
         });
 
-        CommandManager.AddHandler("/updateself", new CommandInfo(UpdateSelf)
+        CommandManager.AddHandler(DebugCommandResetParty, new CommandInfo(ResetParty)
         {
-            HelpMessage = "Force update yourself"
+            HelpMessage = "Force reset the party list, debug command"
         });
+
 
         PluginInterface.UiBuilder.Draw += DrawUI;
 
@@ -105,13 +113,14 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
 
-        CommandManager.RemoveHandler("/updateself");
-        CommandManager.RemoveHandler("/resetplist");
-        CommandManager.RemoveHandler("/updateplist");
-        CommandManager.RemoveHandler("/jfall");
-        CommandManager.RemoveHandler("/jfparty");
-        CommandManager.RemoveHandler("/jfself");
-        CommandManager.RemoveHandler("/jfconfig");
+        CommandManager.RemoveHandler(DebugCommandResetParty);
+        CommandManager.RemoveHandler(DebugCommandUpdateParty);
+        CommandManager.RemoveHandler(DebugCommandUpdateSelf);
+        CommandManager.RemoveHandler(CommandToggleAll);
+        CommandManager.RemoveHandler(CommandToggleParty);
+        CommandManager.RemoveHandler(CommandToggleSelf);
+        CommandManager.RemoveHandler(CommandWho);
+        CommandManager.RemoveHandler(CommandConfig);
         //CommandManager.RemoveHandler("/testcommand");
 
         Obscurer.Dispose();
@@ -123,17 +132,19 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void TestCommand(string command, string args)
     {
-
-        var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-        foreach (var member in Service.PartyList)
-        {
-            var objectId = member.ObjectId;
-            string name = member.Name.ToString();
-            Service.PluginLog.Debug(name + " " + objectId.ToString());
-            var objectIdAH = pMemberAgentHud->ObjectId;
-            string nameAH = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-            Service.PluginLog.Debug(nameAH + " " + objectIdAH.ToString());
-        }
+        var msg = new SeString(new TextPayload("\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002?\u0003"));
+        Service.ChatGUi.Print(new XivChatEntry { Message = msg, Type = XivChatType.Echo });
+        /*
+        var hudParty = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+        var textNode = hudParty->PartyMember[1].Name->NodeText;
+        Service.PluginLog.Debug(textNode.ToString());
+        var matched = this.Obscurer.MatchHudTextNode(hudParty->PartyMember[1].Name->NodeText);
+        Service.PluginLog.Debug("test2");
+        var matches = matched[0].Groups;
+        Service.PluginLog.Debug(matches[1].Value);
+        Service.PluginLog.Debug(matches[2].Value);
+        Service.PluginLog.Debug("test3");
+        */
     }
 
     private void ToggleSelf(string command, string args)
@@ -178,20 +189,9 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    internal void UpdateParty(string command, string args)
-    {
-        this.Obscurer.UpdatePartyList();
-    }
-
-    internal void ResetParty(string command, string args)
-    {
-        this.Obscurer.ResetPartyList();
-    }
-
-    internal void UpdateSelf(string command, string args)
-    {
-        this.Obscurer.UpdateSelf();
-    }
+    internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();
+    internal void ResetParty(string command, string args) => Obscurer.ResetPartyList();
+    internal void UpdateSelf(string command, string args) => Obscurer.UpdateSelf();
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();

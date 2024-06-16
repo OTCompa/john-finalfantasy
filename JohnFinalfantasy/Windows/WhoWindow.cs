@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using ImGuiNET;
 
 namespace JohnFinalfantasy.Windows
@@ -14,7 +12,6 @@ namespace JohnFinalfantasy.Windows
     internal unsafe class WhoWindow : Window, IDisposable
     {
         private Plugin plugin;
-        private FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm* InfoProxyCrossRealm { get; set; }
         private bool collapse = true;
         public WhoWindow(Plugin plugin) : base("John Finalfantasy###JohnWho")
         {

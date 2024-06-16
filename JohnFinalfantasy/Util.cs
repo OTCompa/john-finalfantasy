@@ -21,6 +21,23 @@ internal static class Util {
         }
     }
 
+    internal static string IndexName(string name, string world)
+    {
+        return name + " " + world;
+    }
+
+    internal static string GetWorld(short worldId)
+    {
+        string? world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldId)?.Name.ToString();
+        if (world == null)
+        {
+            return "Unknown";
+        } else
+        {
+            return world;
+        }
+    }
+
     internal static byte[] Terminate(this byte[] bs) {
         var terminated = new byte[bs.Length + 1];
         Array.Copy(bs, terminated, bs.Length);
