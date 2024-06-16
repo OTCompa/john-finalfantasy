@@ -25,7 +25,7 @@ public sealed class Plugin : IDalamudPlugin
 
 
     private const string CommandConfig = "/jfconfig";
-    private const string CommandWho = "jfconfig";
+    private const string CommandWho = "/jfwho";
     private const string CommandToggleSelf = "/jfself";
     private const string CommandToggleParty = "/jfparty";
     private const string CommandToggleAll = "/jfall";
