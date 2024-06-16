@@ -9,99 +9,48 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
+using static System.Net.Mime.MediaTypeNames;
+using System.Threading.Channels;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
     private Plugin Plugin { get; }
     internal Dictionary<string, string> replacements { get; set; }
-    private Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String> currentlySwapped { get; set; }
+    private Dictionary<string, Utf8String> currentlySwapped { get; set; }
     internal bool stateChanged { get; set; } = false;
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
-    private FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm* InfoProxyCrossRealm { get; set; }
-    private Regex PmemberHudRegex { get; set; }
+    private InfoProxyCrossRealm* InfoProxyCrossRealm { get; set; }
+    private Regex pMemberPrefixRegex { get; set; }
+    private static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
     internal unsafe Obscurer(Plugin plugin) {
         this.Plugin = plugin;
         replacements = new Dictionary<string, string>();
-        currentlySwapped = new Dictionary<string, FFXIVClientStructs.FFXIV.Client.System.String.Utf8String>();
-
-        PmemberHudRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
-
+        currentlySwapped = new Dictionary<string, Utf8String>();
+        pMemberPrefixRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
         InfoProxyCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
+
         if (this.Plugin.Configuration.EnableForSelf)
         {
             UpdateSelf();
         }
         if (this.Plugin.Configuration.EnableForParty)
         {
-            var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
-            if (isCrossRealm)
-            {
-                var crossRealmGroup = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-                var numMembers = (int)crossRealmGroup->GroupMemberCount;
-                var pMember = (CrossRealmMember*)crossRealmGroup->GroupMembers;
-                pMember++;
-                for (int i = 1; i < numMembers; i++)
-                {
-                    string? name = Marshal.PtrToStringUTF8((nint)pMember->Name);
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        continue;
-                    }
-                    var worldShort = pMember->HomeWorld;
-                    string world = Util.GetWorld(worldShort);
-                    string indexName = Util.IndexName(name, world);
-                    replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
-                    pMember++;
-                }
-            }
-            else
-            {
-                var pListAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                var pListHud = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-                if (pListHud == null)
-                {
-                    Service.PluginLog.Error("HUD is null");
-                }
-                else
-                {
-                    var pMemberHud = &pListHud->PartyMember.PartyMember0;
-                    var pMemberAgentHud = (HudPartyMember*)Service.AgentHud->PartyMemberList;
-                    pMemberHud++;
-                    pMemberAgentHud++;
-                    for (int i = 1; i < pListHud->MemberCount; i++)
-                    {
-                        var name = Marshal.PtrToStringUTF8((nint)pMemberAgentHud->Name);
-                        string world = FindObjectIdWorld(pMemberAgentHud->ObjectId);
-                        string indexName = Util.IndexName(name, world);
-                        replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
-                        pMemberHud++;
-                        pMemberAgentHud++;
-                    }
-                }
-            }
+            UpdatePartyList();
         }
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
         this.Plugin.Functions.AtkTextNodeSetText += this.OnAtkTextNodeSetText;
-
-        //this.Plugin.Functions.CharacterInitialise += this.OnCharacterInitialise;
-        //this.Plugin.Functions.FlagSlotUpdate += this.OnFlagSlotUpdate;
-        //this.Plugin.Common.Functions.NamePlates.OnUpdate += this.OnNamePlateUpdate;
-        //this.Plugin.ChatGui.ChatMessage += this.OnChatMessage;
     }
 
 
-    public unsafe void Dispose() {
-
-        Service.ClientState.Login -= this.OnLogin;
-        //this.Plugin.ChatGui.ChatMessage -= this.OnChatMessage;
-        //this.Plugin.Common.Functions.NamePlates.OnUpdate -= this.OnNamePlateUpdate;
+    public unsafe void Dispose()
+    {
         this.Plugin.Functions.AtkTextNodeSetText -= this.OnAtkTextNodeSetText;
-        //this.Plugin.Functions.CharacterInitialise -= this.OnCharacterInitialise;
-        //this.Plugin.Functions.FlagSlotUpdate -= this.OnFlagSlotUpdate;
+        Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
         if (this.stateChanged)
         {
@@ -139,6 +88,7 @@ internal unsafe class Obscurer : IDisposable {
         this.partySize = partySize;
         this.replacements.Clear();
         this.currentlySwapped.Clear();
+
         // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
@@ -155,9 +105,6 @@ internal unsafe class Obscurer : IDisposable {
             }
         }
     }
-    
-
-    private static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
     private void OnAtkTextNodeSetText(IntPtr node, IntPtr textPtr, ref SeString? overwrite) {
         // A catch-all for UI text. This is slow, so specialised methods should be preferred.
@@ -179,6 +126,12 @@ internal unsafe class Obscurer : IDisposable {
         }
     }
 
+
+    /*
+     *  Change
+     *  updates all non party list related text nodes
+     */
+
     // PERFORMANCE NOTE: This potentially loops over the party list twice and the object
     //                   table once entirely. Should be avoided if being used in a
     //                   position where the player to replace is known.
@@ -188,69 +141,104 @@ internal unsafe class Obscurer : IDisposable {
         }
 
         var changed = false;
-
         var player = Service.ClientState.LocalPlayer;
-
         if (player != null && this.Plugin.Configuration.EnableForSelf) {
-            var playerName = player.Name.ToString();
-            var world = player.HomeWorld.GameData!.Name.ToString();
-            if (this.GetReplacement(playerName, world) is { } replacement) {
-                text.ReplacePlayerName(playerName, replacement);
-                changed = true;
-            }
+            bool temp = ChangeSelfName(player, text);
+            if (temp) { changed = temp; }
         }
         
         if (this.Plugin.Configuration.EnableForParty) {
-            unsafe
+            if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
             {
-                var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
-                if (isCrossRealm)
-                {
-                    var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-                    var numMembers = (int)crossRealmGroup->GroupMemberCount;
-                    var pMember = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmMember*)crossRealmGroup->GroupMembers;
-                    pMember++;
-                    for (int i = 0; i < numMembers - 1; i++)
-                    {
-                        string? name = Marshal.PtrToStringUTF8((nint)pMember->Name);
-                        if (string.IsNullOrEmpty(name))
-                        {
-                            continue;
-                        }
-                        var worldShort = pMember->HomeWorld;
-                        string world = Util.GetWorld(worldShort);
-                        if (this.GetReplacement(name, world) is not { } replacement)
-                        {
-                            continue;
-                        }
-                        text.ReplacePlayerName(name, replacement);
-                        pMember++;
-                        changed = true;
-                    }
-                } else
-                {
-                    foreach (var pMember in Service.PartyList)
-                    {
-                        if (player == null || pMember.ObjectId == player.ObjectId)
-                        {
-                            continue;
-                        }
-                        string name = pMember.Name.ToString();
-                        string world = pMember.World.GameData.Name.ToString();
-                        if (this.GetReplacement(name, world) is not { } replacement)
-                        {
-                            continue;
-                        }
+                bool temp = ChangeCRPartyNames(text);
+                if (temp) { changed = temp; }
 
-                        text.ReplacePlayerName(name, replacement);
-                        changed = true;
-                    }
-                }
+            } else
+            {
+                bool temp = ChangeLocalPartyNames(player, text);
+                if (temp) { changed = temp; }
             }
         }
-        
         return changed;
     }
+
+    private bool ChangeSelfName(PlayerCharacter player, SeString text)
+    {
+        if (player != null)
+        {
+            var playerName = player.Name.ToString();
+            var world = player.HomeWorld.GameData!.Name.ToString();
+            if (this.GetReplacement(playerName, world) is { } replacement)
+            {
+                text.ReplacePlayerName(playerName, replacement);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool ChangeCRPartyNames(SeString text)
+    {
+        var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
+        var numMembers = (int)crParty->GroupMemberCount;
+        bool changed = false;
+        for (int i = 1; i < numMembers; i++)
+        {
+            var pMember = crParty->GroupMembersSpan[i];
+            string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+            var worldShort = pMember.HomeWorld;
+            string world = Util.GetWorld(worldShort);
+            if (this.GetReplacement(name, world) is not { } replacement)
+            {
+                continue;
+            }
+            text.ReplacePlayerName(name, replacement);
+            changed = true;
+        }
+        return changed;
+    }
+
+    private bool ChangeLocalPartyNames(PlayerCharacter? player, SeString text)
+    {
+        bool changed = false;
+        foreach (var pMember in Service.PartyList)
+        {
+            if (player == null || pMember.ObjectId == player.ObjectId)
+            {
+                continue;
+            }
+            string name = pMember.Name.ToString();
+            string world = pMember.World.GameData!.Name.ToString();
+            if (this.GetReplacement(name, world) is not { } replacement)
+            {
+                continue;
+            }
+
+            text.ReplacePlayerName(name, replacement);
+            changed = true;
+        }
+        return changed;
+    }
+
+    internal string? GetReplacement(string name, string world)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return null;
+        }
+
+        string indexName = Util.IndexName(name, world);
+        if (this.replacements.TryGetValue(indexName, out var replacement))
+        {
+            return replacement;
+        }
+        return null;
+    }
+
 
     /*
      *  Update
@@ -372,7 +360,6 @@ internal unsafe class Obscurer : IDisposable {
      *  Reset
      */
 
-
     internal unsafe void ResetPartyList()
     {
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
@@ -480,6 +467,14 @@ internal unsafe class Obscurer : IDisposable {
         }
     }
 
+    private void UpdateTextNodePtr(string name, string world, AddonPartyList.PartyListMemberStruct hudElement)
+    {
+        var index = Util.IndexName(name, world);
+        currentlySwapped[index] = hudElement.Name->NodeText;
+    }
+
+    /* General Helpers */
+
     private string FindObjectIdWorld(uint objectId)
     {
         // Dependent on iPartyList so does not work for solo local parties
@@ -497,34 +492,13 @@ internal unsafe class Obscurer : IDisposable {
         return "Unassigned";
     }
 
-    private void UpdateTextNodePtr(string name, string world, AddonPartyList.PartyListMemberStruct hudElement)
-    {
-        var index = Util.IndexName(name, world);
-        currentlySwapped[index] = hudElement.Name->NodeText;
-    }
-
-    /* General Helpers */
-    internal string? GetReplacement(string name, string world)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            return null;
-        }
-
-        string indexName = Util.IndexName(name, world);
-        if (this.replacements.TryGetValue(indexName, out var replacement))
-        {
-            return replacement;
-        }
-        return null;
-    }
-
     private MatchCollection MatchHudTextNode(Utf8String textNode)
     {
-        return this.PmemberHudRegex.Matches(textNode.ToString()!);
+        return this.pMemberPrefixRegex.Matches(textNode.ToString()!);
     }
 
     // this should fail for "Viewing Cutscene", which is intentional
+    // any other case isn't tho
     private string? GetPrefix(Utf8String textNode)
     {
         MatchCollection matched = MatchHudTextNode(textNode);

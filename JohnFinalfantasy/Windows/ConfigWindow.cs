@@ -71,7 +71,7 @@ public class ConfigWindow : Window, IDisposable
             this.plugin.Obscurer.partySize = -1;
         }
         ImGui.Separator();
-        using var partyNameTable = ImRaii.Table("fps_input_settings", 2);
+        using var partyNameTable = ImRaii.Table("PartyTable", 2);
         for (var i = 0; i < 8; i++)
         {
             ImGui.PushID(i);
