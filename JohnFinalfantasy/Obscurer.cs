@@ -1,21 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
-using System.Reflection.Metadata.Ecma335;
-using System.Net.NetworkInformation;
-using Dalamud.Utility;
-using static Lumina.Data.Parsing.Uld.NodeData;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
@@ -128,9 +121,9 @@ internal unsafe class Obscurer : IDisposable {
     }
 
     private void OnFrameworkUpdate(IFramework framework) {
-        var isCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.IsCrossRealmParty();
+        var isCrossRealm = InfoProxyCrossRealm->IsInCrossRealmParty != 0;
         int partySize = 0;
-        if (isCrossRealm)
+        if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
         {
             var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
             partySize = (int)crossRealmGroup->GroupMemberCount;

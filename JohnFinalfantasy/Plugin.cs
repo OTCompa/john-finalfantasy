@@ -4,16 +4,9 @@ using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using JohnFinalfantasy.Windows;
-using System.Runtime.InteropServices;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using ImGuiNET;
-using static Lumina.Data.Parsing.Uld.NodeData;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using Microsoft.VisualBasic;
 
 namespace JohnFinalfantasy;
 
@@ -21,13 +14,15 @@ public sealed class Plugin : IDalamudPlugin
 {
     private DalamudPluginInterface PluginInterface { get; init; }
     private ICommandManager CommandManager { get; init; }
+
     public Configuration Configuration { get; init; }
+    internal GameFunctions Functions { get; init; }
+    internal Obscurer Obscurer { get; init; }
+
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
     private WhoWindow WhoWindow { get; init; }
-    private Service service { get; init; }
-    internal GameFunctions Functions { get; init; }
-    internal Obscurer Obscurer { get; init; }
+
 
     private const string CommandConfig = "/jfconfig";
     private const string CommandWho = "jfconfig";
@@ -40,8 +35,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-        [RequiredVersion("1.0")] ICommandManager commandManager,
-        [RequiredVersion("1.0")] ITextureProvider textureProvider)
+        [RequiredVersion("1.0")] ICommandManager commandManager)
     {
 
         PluginInterface = pluginInterface;
@@ -195,20 +189,9 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    internal void UpdateParty(string command, string args)
-    {
-        this.Obscurer.UpdatePartyList();
-    }
-
-    internal void ResetParty(string command, string args)
-    {
-        this.Obscurer.ResetPartyList();
-    }
-
-    internal void UpdateSelf(string command, string args)
-    {
-        this.Obscurer.UpdateSelf();
-    }
+    internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();
+    internal void ResetParty(string command, string args) => Obscurer.ResetPartyList();
+    internal void UpdateSelf(string command, string args) => Obscurer.UpdateSelf();
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();
