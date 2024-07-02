@@ -12,6 +12,8 @@ using FFXIVClientStructs.FFXIV.Client.System.String;
 using static System.Net.Mime.MediaTypeNames;
 using System.Threading.Channels;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using System.Numerics;
+using System.Diagnostics;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
@@ -21,7 +23,7 @@ internal unsafe class Obscurer : IDisposable {
     internal bool stateChanged { get; set; } = false;
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
-    private InfoProxyCrossRealm* InfoProxyCrossRealm { get; set; }
+    private InfoProxyCrossRealm InfoProxyCrossRealm { get; set; }
     private Regex pMemberPrefixRegex { get; set; }
     private static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
@@ -30,7 +32,7 @@ internal unsafe class Obscurer : IDisposable {
         replacements = new Dictionary<string, string>();
         currentlySwapped = new Dictionary<string, Utf8String>();
         pMemberPrefixRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
-        InfoProxyCrossRealm = FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
+        InfoProxyCrossRealm = *FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
 
         if (this.Plugin.Configuration.EnableForSelf)
         {
@@ -70,12 +72,12 @@ internal unsafe class Obscurer : IDisposable {
     }
 
     private void OnFrameworkUpdate(IFramework framework) {
-        var isCrossRealm = InfoProxyCrossRealm->IsInCrossRealmParty != 0;
+        var isCrossRealm = InfoProxyCrossRealm.IsInCrossRealmParty != 0;
         int partySize = 0;
-        if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
+        if (InfoProxyCrossRealm.IsInCrossRealmParty != 0)
         {
-            var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-            partySize = (int)crossRealmGroup->GroupMemberCount;
+            var crossRealmGroup = (FFXIVClientStructs.FFXIV.Client.UI.Info.CrossRealmGroup)InfoProxyCrossRealm.CrossRealmGroups[0];
+            partySize = (int)crossRealmGroup.GroupMemberCount;
         } else
         {
             partySize = Service.PartyList.Length;
@@ -148,7 +150,7 @@ internal unsafe class Obscurer : IDisposable {
         }
         
         if (this.Plugin.Configuration.EnableForParty) {
-            if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
+            if (InfoProxyCrossRealm.IsInCrossRealmParty != 0)
             {
                 bool temp = ChangeCRPartyNames(text);
                 if (temp) { changed = temp; }
@@ -162,7 +164,7 @@ internal unsafe class Obscurer : IDisposable {
         return changed;
     }
 
-    private bool ChangeSelfName(PlayerCharacter player, SeString text)
+    private bool ChangeSelfName(IPlayerCharacter player, SeString text)
     {
         if (player != null)
         {
@@ -179,13 +181,13 @@ internal unsafe class Obscurer : IDisposable {
 
     private bool ChangeCRPartyNames(SeString text)
     {
-        var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-        var numMembers = (int)crParty->GroupMemberCount;
+        var crParty = (CrossRealmGroup)InfoProxyCrossRealm.CrossRealmGroups[0];
+        var numMembers = (int)crParty.GroupMemberCount;
         bool changed = false;
         for (int i = 1; i < numMembers; i++)
         {
-            var pMember = crParty->GroupMembersSpan[i];
-            string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            var pMember = crParty.GroupMembers[i];
+            string? name = pMember.NameString;
             if (string.IsNullOrEmpty(name))
             {
                 continue;
@@ -202,12 +204,12 @@ internal unsafe class Obscurer : IDisposable {
         return changed;
     }
 
-    private bool ChangeLocalPartyNames(PlayerCharacter? player, SeString text)
+    private bool ChangeLocalPartyNames(IPlayerCharacter? player, SeString text)
     {
         bool changed = false;
         foreach (var pMember in Service.PartyList)
         {
-            if (player == null || pMember.ObjectId == player.ObjectId)
+            if (player == null || pMember.ObjectId == player.GameObjectId)
             {
                 continue;
             }
@@ -250,9 +252,10 @@ internal unsafe class Obscurer : IDisposable {
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         if (hudParty == null)
         {
+            Service.PluginLog.Error("HUD is null");
             return false;
         }
-        var pMemberHud = &hudParty->PartyMember.PartyMember0;
+        var pMemberHud = hudParty->PartyMembers[0];
         if (player == null)
         {
             return false;
@@ -262,7 +265,6 @@ internal unsafe class Obscurer : IDisposable {
         string indexName = Util.IndexName(name, world);
         replacements[indexName] = this.Plugin.Configuration.PartyNames[0];
         Service.PluginLog.Info("Self updating: " + name + " " + world);
-
         UpdatePartyListHelper(indexName, *hudParty, 0);
         stateChanged = true;
         return true;
@@ -277,7 +279,7 @@ internal unsafe class Obscurer : IDisposable {
             Service.PluginLog.Error("HUD is null");
             return false;
         }
-        if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
+        if (InfoProxyCrossRealm.IsInCrossRealmParty != 0)
         {
             UpdateCrPartyList(*hudParty);
         }
@@ -291,12 +293,12 @@ internal unsafe class Obscurer : IDisposable {
 
     private void UpdateCrPartyList(AddonPartyList hudParty)
     {
-        var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-        var numMembers = (int)crParty->GroupMemberCount;
+        var crParty = (CrossRealmGroup)InfoProxyCrossRealm.CrossRealmGroups[0];
+        var numMembers = (int)crParty.GroupMemberCount;
         for (int i = 1; i < numMembers; i++)
         {
-            var pMember = crParty->GroupMembersSpan[i];
-            string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            var pMember = crParty.GroupMembers[i];
+            string? name = pMember.NameString;
             if (string.IsNullOrEmpty(name))
             {
                 continue;
@@ -316,7 +318,6 @@ internal unsafe class Obscurer : IDisposable {
     {
         bool ret = true;
         var player = Service.ClientState.LocalPlayer;
-
         var numMembers = hudParty.MemberCount;
         var localParty = Service.AgentHud;
         if (numMembers < expected)
@@ -325,13 +326,13 @@ internal unsafe class Obscurer : IDisposable {
         }
         for (int i = 1; i < numMembers; i++)
         {
-            var pMember = localParty->PartyMemberListSpan[i];
+            var pMember = localParty->PartyMembers[i];
             string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
             if (string.IsNullOrEmpty(name))
             {
                 continue;
             }
-            string world = FindObjectIdWorld(pMember.ObjectId);
+            string world = FindObjectIdWorld(pMember.EntityId);
             var indexName = Util.IndexName(name, world);
             replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
             if (ret)
@@ -346,12 +347,16 @@ internal unsafe class Obscurer : IDisposable {
 
     private void UpdatePartyListHelper(string indexName, AddonPartyList hudParty, int pos)
     {
-        var textNode = hudParty.PartyMember[pos].Name->NodeText;
+        var textNode = hudParty.PartyMembers[pos].Name->NodeText;
+        var name = (int)hudParty.PartyMembers[pos].Name->TextFlags;
+        name |= (int)FFXIVClientStructs.FFXIV.Component.GUI.TextFlags.WordWrap;
+
         string? prefix = GetPrefix(textNode);
         if (!string.IsNullOrEmpty(prefix))
         {
             currentlySwapped[indexName] = textNode;
             textNode.SetString(prefix + replacements[indexName]);
+            
         }
     }
 
@@ -363,11 +368,11 @@ internal unsafe class Obscurer : IDisposable {
     internal unsafe void ResetPartyList()
     {
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        if (InfoProxyCrossRealm->IsInCrossRealmParty != 0)
+        if (InfoProxyCrossRealm.IsInCrossRealmParty != 0)
         {
-            var crParty = (CrossRealmGroup*)InfoProxyCrossRealm->CrossRealmGroupArray;
-            UpdateCRTextNodePtrs(*crParty, *hudParty);
-            ResetCRPartyNames(*crParty);
+            var crParty = (CrossRealmGroup)InfoProxyCrossRealm.CrossRealmGroups[0];
+            UpdateCRTextNodePtrs(crParty, *hudParty);
+            ResetCRPartyNames(crParty);
         }
         else
         {
@@ -381,8 +386,8 @@ internal unsafe class Obscurer : IDisposable {
     {
         for (int i = 0; i < crParty.GroupMemberCount; i++)
         {
-            var pMember = crParty.GroupMembersSpan[i];
-            var name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            var pMember = crParty.GroupMembers[i];
+            var name = pMember.NameString;
             if (string.IsNullOrEmpty(name))
             {
                 continue;
@@ -396,15 +401,15 @@ internal unsafe class Obscurer : IDisposable {
     {
         for (var i = 0; i < crParty.GroupMemberCount; i++)
         {
-            var pMember = crParty.GroupMembersSpan[i];
-            string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            var pMember = crParty.GroupMembers[i];
+            string? name = pMember.NameString;
             if (string.IsNullOrEmpty(name))
             {
                 continue;
             }
             var worldShort = pMember.HomeWorld;
 
-            UpdateTextNodePtr(name, Util.GetWorld(worldShort), hudParty.PartyMember[i]);
+            UpdateTextNodePtr(name, Util.GetWorld(worldShort), hudParty.PartyMembers[i]);
         }
     }
 
@@ -450,20 +455,20 @@ internal unsafe class Obscurer : IDisposable {
         {
             string name = player.Name.ToString();
             string world = player.HomeWorld.GameData!.Name.ToString();
-            UpdateTextNodePtr(name, world, hudParty.PartyMember[0]);
+            UpdateTextNodePtr(name, world, hudParty.PartyMembers[0]);
         }
 
         // Update text ptr for party
         for (int i = 1; i < localParty.PartyMemberCount; i++)
         {
-            var pMember = localParty.PartyMemberListSpan[i];
+            var pMember = localParty.PartyMembers[i];
             string? name = Marshal.PtrToStringUTF8((nint)pMember.Name);
             if (string.IsNullOrEmpty(name))
             {
                 continue;
             }
-            string world = FindObjectIdWorld(pMember.ObjectId);
-            UpdateTextNodePtr(name, world, hudParty.PartyMember[i]);
+            string world = FindObjectIdWorld(pMember.EntityId);
+            UpdateTextNodePtr(name, world, hudParty.PartyMembers[i]);
         }
     }
 
