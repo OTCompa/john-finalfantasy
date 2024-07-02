@@ -12,9 +12,8 @@ namespace JohnFinalfantasy;
 
 public sealed class Plugin : IDalamudPlugin
 {
-    private DalamudPluginInterface PluginInterface { get; init; }
-    private ICommandManager CommandManager { get; init; }
-
+    [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+    [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     public Configuration Configuration { get; init; }
     internal GameFunctions Functions { get; init; }
     internal Obscurer Obscurer { get; init; }
@@ -33,15 +32,11 @@ public sealed class Plugin : IDalamudPlugin
     private const string DebugCommandUpdateSelf = "/updateself";
     private const string DebugCommandResetParty = "/resetplist";
 
-    public Plugin(
-        [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-        [RequiredVersion("1.0")] ICommandManager commandManager)
+    public Plugin()
     {
 
-        PluginInterface = pluginInterface;
-        CommandManager = commandManager;
 
-        Service.Initialize(pluginInterface);
+        Service.Initialize(PluginInterface);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Configuration.Initialize(PluginInterface);

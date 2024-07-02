@@ -17,7 +17,7 @@ internal class Service
     [PluginService] internal static IChatGui ChatGUi { get; set; }
     internal unsafe static AgentHUD* AgentHud => AgentModule.Instance()->GetAgentHUD();
 
-    internal static void Initialize(DalamudPluginInterface pluginInterface)
+    internal static void Initialize(IDalamudPluginInterface pluginInterface)
     {
         pluginInterface.Create<Service>();
     }
