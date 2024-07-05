@@ -14,12 +14,13 @@ using System.Threading.Channels;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using System.Numerics;
 using System.Diagnostics;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable {
     private Plugin Plugin { get; }
     internal Dictionary<string, string> replacements { get; set; }
-    private Dictionary<string, Utf8String> currentlySwapped { get; set; }
+    private Dictionary<string, AtkTextNode> currentlySwapped { get; set; }
     internal bool stateChanged { get; set; } = false;
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
@@ -30,7 +31,7 @@ internal unsafe class Obscurer : IDisposable {
     internal unsafe Obscurer(Plugin plugin) {
         this.Plugin = plugin;
         replacements = new Dictionary<string, string>();
-        currentlySwapped = new Dictionary<string, Utf8String>();
+        currentlySwapped = new Dictionary<string, AtkTextNode>();
         pMemberPrefixRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
         InfoProxyCrossRealm = *FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
 
@@ -347,16 +348,17 @@ internal unsafe class Obscurer : IDisposable {
 
     private void UpdatePartyListHelper(string indexName, AddonPartyList hudParty, int pos)
     {
-        var textNode = hudParty.PartyMembers[pos].Name->NodeText;
+        var textNode = hudParty.PartyMembers[pos].Name;
         var name = (int)hudParty.PartyMembers[pos].Name->TextFlags;
-        name |= (int)FFXIVClientStructs.FFXIV.Component.GUI.TextFlags.WordWrap;
+        hudParty.PartyMembers[pos].Name->TextFlags |= (int)FFXIVClientStructs.FFXIV.Component.GUI.TextFlags.Edge;
+        hudParty.PartyMembers[pos].Name->TextFlags2 |= (int)FFXIVClientStructs.FFXIV.Component.GUI.TextFlags2.Ellipsis;
 
-        string? prefix = GetPrefix(textNode);
+        string? prefix = GetPrefix(textNode->NodeText);
         if (!string.IsNullOrEmpty(prefix))
         {
-            currentlySwapped[indexName] = textNode;
-            textNode.SetString(prefix + replacements[indexName]);
+            currentlySwapped[indexName] = *textNode;
             
+            textNode->SetText(prefix + replacements[indexName]);
         }
     }
 
@@ -419,10 +421,10 @@ internal unsafe class Obscurer : IDisposable {
         Service.PluginLog.Info("Resetting: " + name + " " + world);
         if (currentlySwapped.TryGetValue(indexName, out var textNode))
         {
-            string? prefix = GetPrefix(textNode);
+            string? prefix = GetPrefix(textNode.NodeText);
             if (!string.IsNullOrEmpty(prefix))
             {
-                textNode.SetString(prefix + name);
+                textNode.SetText(prefix + name);
             }
         }
     }
@@ -475,7 +477,7 @@ internal unsafe class Obscurer : IDisposable {
     private void UpdateTextNodePtr(string name, string world, AddonPartyList.PartyListMemberStruct hudElement)
     {
         var index = Util.IndexName(name, world);
-        currentlySwapped[index] = hudElement.Name->NodeText;
+        currentlySwapped[index] = *hudElement.Name;
     }
 
     /* General Helpers */
