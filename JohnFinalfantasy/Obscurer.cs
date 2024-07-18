@@ -25,6 +25,8 @@ internal unsafe class Obscurer : IDisposable {
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
     private InfoProxyCrossRealm InfoProxyCrossRealm { get; set; }
+    private InfoProxyPartyMember* infoProxyPartyMember { get; set; }
+    private InfoProxyCommonList CommonListPartyList { get; set; }
     private Regex pMemberPrefixRegex { get; set; }
     private static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
@@ -34,6 +36,8 @@ internal unsafe class Obscurer : IDisposable {
         currentlySwapped = new Dictionary<string, AtkTextNode>();
         pMemberPrefixRegex = new Regex("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$");
         InfoProxyCrossRealm = *FFXIVClientStructs.FFXIV.Client.UI.Info.InfoProxyCrossRealm.Instance();
+        infoProxyPartyMember = InfoProxyPartyMember.Instance();
+        CommonListPartyList = infoProxyPartyMember->InfoProxyCommonList;
 
         if (this.Plugin.Configuration.EnableForSelf)
         {
@@ -333,7 +337,7 @@ internal unsafe class Obscurer : IDisposable {
             {
                 continue;
             }
-            string world = FindObjectIdWorld(pMember.EntityId);
+            string world = GetWorldByContentId(pMember.ContentId);
             var indexName = Util.IndexName(name, world);
             replacements[indexName] = this.Plugin.Configuration.PartyNames[i];
             if (ret)
@@ -469,7 +473,7 @@ internal unsafe class Obscurer : IDisposable {
             {
                 continue;
             }
-            string world = FindObjectIdWorld(pMember.EntityId);
+            string world = GetWorldByContentId(pMember.ContentId);
             UpdateTextNodePtr(name, world, hudParty.PartyMembers[i]);
         }
     }
@@ -482,21 +486,16 @@ internal unsafe class Obscurer : IDisposable {
 
     /* General Helpers */
 
-    private string FindObjectIdWorld(uint objectId)
+    private string GetWorldByContentId(ulong contentId)
     {
-        // Dependent on iPartyList so does not work for solo local parties
-        foreach (var member in Service.PartyList)
+        var player = CommonListPartyList.GetEntryByContentId(contentId);
+        if (player == null)
         {
-            if (member.ObjectId == objectId)
-            {
-                var temp = member.World.GameData!.Name.ToString();
-                if (!string.IsNullOrEmpty(temp))
-                {
-                    return temp;
-                }
-            }
+            Service.PluginLog.Debug("Character not found: ", contentId);
+            return "Unassigned";
         }
-        return "Unassigned";
+        var worldShort = player->HomeWorld;
+        return Util.GetWorld((short)worldShort);
     }
 
     private MatchCollection MatchHudTextNode(Utf8String textNode)

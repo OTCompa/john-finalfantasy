@@ -7,6 +7,7 @@ using JohnFinalfantasy.Windows;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace JohnFinalfantasy;
 
@@ -49,12 +50,12 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
 
-        /*
-        CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
-        {
-            HelpMessage = "test debug"
-        });
-        */
+        #if DEBUG
+            CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
+            {
+                HelpMessage = "test debug"
+            });
+        #endif
 
         CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
@@ -116,8 +117,9 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandToggleSelf);
         CommandManager.RemoveHandler(CommandWho);
         CommandManager.RemoveHandler(CommandConfig);
-        //CommandManager.RemoveHandler("/testcommand");
-
+        #if DEBUG
+            CommandManager.RemoveHandler("/testcommand");
+        #endif
         Obscurer.Dispose();
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();
@@ -127,19 +129,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private unsafe void TestCommand(string command, string args)
     {
-        var msg = new SeString(new TextPayload("\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002?\u0003"));
-        Service.ChatGUi.Print(new XivChatEntry { Message = msg, Type = XivChatType.Echo });
-        /*
-        var hudParty = (FFXIVClientStructs.FFXIV.Client.UI.AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        var textNode = hudParty->PartyMember[1].Name->NodeText;
-        Service.PluginLog.Debug(textNode.ToString());
-        var matched = this.Obscurer.MatchHudTextNode(hudParty->PartyMember[1].Name->NodeText);
-        Service.PluginLog.Debug("test2");
-        var matches = matched[0].Groups;
-        Service.PluginLog.Debug(matches[1].Value);
-        Service.PluginLog.Debug(matches[2].Value);
-        Service.PluginLog.Debug("test3");
-        */
     }
 
     private void ToggleSelf(string command, string args)
