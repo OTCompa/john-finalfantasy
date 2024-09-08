@@ -9,6 +9,8 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable
@@ -49,7 +51,7 @@ internal unsafe class Obscurer : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        var isCrossRealm = InfoProxyCrossRealm.Instance()->IsInCrossRealmParty != 0;
+        var isCrossRealm = InfoProxyCrossRealm.IsCrossRealmParty();
         int partySize = 0;
 
         // get party list length
@@ -128,7 +130,7 @@ internal unsafe class Obscurer : IDisposable
 
         if (this.Plugin.Configuration.EnableForParty)
         {
-            if (InfoProxyCrossRealm.Instance()->IsInCrossRealmParty != 0)
+            if (InfoProxyCrossRealm.IsCrossRealmParty())
             {
                 bool temp = ChangeCrPartyNames(text);
                 if (temp) changed = temp;
@@ -157,6 +159,7 @@ internal unsafe class Obscurer : IDisposable
         return false;
     }
 
+    // untested in alliance raids, future reminder to look at this if they give any issues
     private bool ChangeCrPartyNames(SeString text)
     {
         bool changed = false;
@@ -221,9 +224,7 @@ internal unsafe class Obscurer : IDisposable
     internal bool UpdatePartyList(int expected = 0)
     {
         var ret = true;
-        var infoProxyCrossRealm = InfoProxyCrossRealm.Instance();
-
-        if (infoProxyCrossRealm->IsInCrossRealmParty != 0)
+        if (InfoProxyCrossRealm.IsCrossRealmParty())
         {
             ret = updateCrPartyList();
         }
@@ -304,7 +305,7 @@ internal unsafe class Obscurer : IDisposable
         }
 
         var textNode = hudParty->PartyMembers[pos].Name;
-        string? prefix = GetPrefix(textNode->NodeText);
+        string? prefix = Util.GetPrefix(textNode->NodeText);
         if (!string.IsNullOrEmpty(prefix))
         {
             if (!playerList.UpdateEntryTextNode(contentId, textNode))
@@ -346,21 +347,21 @@ internal unsafe class Obscurer : IDisposable
 
     internal unsafe void ResetPartyList()
     {
-        if (InfoProxyCrossRealm.Instance()->IsInCrossRealmParty != 0)
+        var numMembers = InfoProxyCrossRealm.GetPartyMemberCount();
+        if (Service.PartyList.Length == 0 && numMembers != 0)
         {
-            var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
-            ResetCrPartyNames(crParty);
-        }
-        else
+            ResetCrPartyNames();
+        } else
         {
             ResetLocalPartyNames();
         }
         stateChanged = false;
     }
 
-    private void ResetCrPartyNames(CrossRealmGroup crParty)
+    private void ResetCrPartyNames()
     {
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+        var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
         if (hudParty == null)
         {
             Service.PluginLog.Error("HUD is null");
@@ -373,13 +374,14 @@ internal unsafe class Obscurer : IDisposable
             var name = pMember.NameString;
             var contentId = pMember.ContentId;
             if (string.IsNullOrEmpty(name)) continue;
-            UpdateTextNodePtr(contentId, hudParty->PartyMembers[i]);
-            ResetPartyHelper(contentId);
+            updateTextNodePtr(contentId, hudParty->PartyMembers[i]);
+            resetPartyHelper(contentId);
         }
     }
 
     private void ResetLocalPartyNames()
     {
+        var agentHud = AgentModule.Instance()->GetAgentHUD();
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
         if (hudParty == null)
         {
@@ -387,23 +389,16 @@ internal unsafe class Obscurer : IDisposable
             return;
         }
 
-        if (Service.PartyList.Length == 0)
+        for (int i = 0; i < agentHud->PartyMemberCount; i++)
         {
-            var contentId = Service.ClientState.LocalContentId;
-            UpdateTextNodePtr(contentId, hudParty->PartyMembers[0]);
-            ResetPartyHelper(contentId);
-        }
-
-        for (int i = 0; i < Service.PartyList.Length; i++)
-        {
-            var pMember = Service.PartyList[i];
-            var contentId = (ulong)pMember!.ContentId;
-            UpdateTextNodePtr(contentId, hudParty->PartyMembers[i]);
-            ResetPartyHelper(contentId);
+            var pMember = agentHud->PartyMembers[i];
+            var contentId = pMember.ContentId;
+            updateTextNodePtr(contentId, hudParty->PartyMembers[i]);
+            resetPartyHelper(contentId);
         }
     }
 
-    private void ResetPartyHelper(ulong contentId)
+    private void resetPartyHelper(ulong contentId)
     {
         if (!playerList.GetOriginal(contentId, out var original))
         {
@@ -414,34 +409,13 @@ internal unsafe class Obscurer : IDisposable
             return;
         }
 
-        string? prefix = GetPrefix(textNode->NodeText);
+        string? prefix = Util.GetPrefix(textNode->NodeText);
         if (string.IsNullOrEmpty(prefix)) textNode->SetText(original!);
         else textNode->SetText(prefix + original!);
     }
 
-    private void UpdateTextNodePtr(ulong contentId, AddonPartyList.PartyListMemberStruct partyMember)
+    private void updateTextNodePtr(ulong contentId, AddonPartyList.PartyListMemberStruct partyMember)
     {
         playerList.UpdateEntryTextNode(contentId, partyMember.Name);
-    }
-
-    /* General Helpers */
-
-    private static MatchCollection MatchHudTextNode(Utf8String textNode)
-    {
-        return Util.LevelPrefix.Matches(textNode.ToString()!);
-    }
-
-    // this should fail for "Viewing Cutscene", which is intentional
-    // any other case isn't tho
-    internal static string? GetPrefix(Utf8String textNode)
-    {
-        MatchCollection matched = MatchHudTextNode(textNode);
-        if (matched.Count > 0)
-        {
-            var matches = matched[0].Groups;
-            return matches[1].Value;
-        }
-        Service.PluginLog.Debug("Regex failed for: " + textNode);
-        return null;
     }
 }
