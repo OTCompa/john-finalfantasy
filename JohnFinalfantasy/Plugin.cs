@@ -7,7 +7,6 @@ using JohnFinalfantasy.Windows;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace JohnFinalfantasy;
 
@@ -50,12 +49,12 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
 
-        #if DEBUG
+#if DEBUG
             CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
             {
                 HelpMessage = "test debug"
             });
-        #endif
+#endif
 
         CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
@@ -117,9 +116,9 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandToggleSelf);
         CommandManager.RemoveHandler(CommandWho);
         CommandManager.RemoveHandler(CommandConfig);
-        #if DEBUG
+#if DEBUG
             CommandManager.RemoveHandler("/testcommand");
-        #endif
+#endif
         Obscurer.Dispose();
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();

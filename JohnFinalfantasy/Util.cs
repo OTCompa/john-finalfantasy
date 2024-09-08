@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using FFXIVClientStructs.FFXIV.Client.System.String;
 
 namespace JohnFinalfantasy;
 
 internal static class Util {
+    internal static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
+    internal static readonly Regex LevelPrefix = new("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$", RegexOptions.Compiled);
+
     internal static void ReplacePlayerName(this SeString text, string name, string replacement) {
         if (string.IsNullOrEmpty(name)) {
             return;
@@ -21,29 +26,31 @@ internal static class Util {
         }
     }
 
-    internal static string IndexName(string name, string world)
+    private static MatchCollection MatchHudTextNode(Utf8String textNode)
     {
-        return name + " " + world;
+        return Util.LevelPrefix.Matches(textNode.ToString()!);
     }
 
-    internal static string GetWorld(short worldId)
+    // this should fail for "Viewing Cutscene", which is intentional
+    // any other case isn't tho
+    internal static string? GetPrefix(Utf8String textNode)
     {
-        string? world = Service.DataManager.GetExcelSheet<Lumina.Excel.GeneratedSheets.World>()!.GetRow((uint)worldId)?.Name.ToString();
-        if (world == null)
+        MatchCollection matched = MatchHudTextNode(textNode);
+        if (matched.Count > 0)
         {
-            return "Unknown";
-        } else
-        {
-            return world;
+            var matches = matched[0].Groups;
+            return matches[1].Value;
         }
+        Service.PluginLog.Debug("Regex failed for: " + textNode);
+        return null;
     }
 
     internal static byte[] Terminate(this byte[] bs) {
-        var terminated = new byte[bs.Length + 1];
-        Array.Copy(bs, terminated, bs.Length);
-        terminated[^1] = 0;
-        return terminated;
-    }
+            var terminated = new byte[bs.Length + 1];
+            Array.Copy(bs, terminated, bs.Length);
+            terminated[^1] = 0;
+            return terminated;
+        }
 
     internal static SeString ReadRawSeString(IntPtr ptr) {
         var bytes = ReadRawBytes(ptr);
