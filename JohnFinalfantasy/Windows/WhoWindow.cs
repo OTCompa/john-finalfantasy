@@ -31,10 +31,27 @@ namespace JohnFinalfantasy.Windows
             {
                 string list = "";
                 int i = 1;
-                foreach (var entry in plugin.Obscurer.replacements)
+                using (var table = ImRaii.Table("Who'sWho##whotable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollX | ImGuiTableFlags.ScrollY))
                 {
-                    list += i.ToString() + ". " + entry.Value + ": " + entry.Key + "\n";
-                    i++;
+                    if (table)
+                    {
+                        ImGui.TableSetupColumn($"###whocol1", ImGuiTableColumnFlags.WidthFixed, 10);
+                        ImGui.TableSetupColumn($"###whocol2", ImGuiTableColumnFlags.WidthStretch);
+                        ImGui.TableSetupColumn($"###whocol3", ImGuiTableColumnFlags.WidthStretch);
+                        ImGui.TableNextRow();
+
+                        foreach (var entry in plugin.Obscurer.playerList.GetAllNames())
+                        {
+                            ImGui.TableSetColumnIndex(0);
+                            ImGui.TextUnformatted(i.ToString());
+                            ImGui.TableSetColumnIndex(1);
+                            ImGui.TextUnformatted(entry.Item1);
+                            ImGui.TableSetColumnIndex(2);
+                            ImGui.TextUnformatted(entry.Item2);
+                            ImGui.TableNextRow();
+                            i++;
+                        }
+                    }
                 }
                 ImGui.Text(list);
             }
