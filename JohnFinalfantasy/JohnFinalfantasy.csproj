@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+
   <Import Project="Dalamud.Plugin.Bootstrap.targets" />
 
   <PropertyGroup>
-    <Version>1.0.1.1</Version>
+    <Version>1.0.1.2</Version>
     <Description>A plugin that replaces the names of players in your party with preset names. Based on Nomina Occulta by anna.lgbt.</Description>
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
@@ -11,6 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Update="DalamudPackager" Version="2.1.13" />
+    <PackageReference Update="DalamudPackager" Version="11.0.0" />
   </ItemGroup>
+
+
 </Project>
