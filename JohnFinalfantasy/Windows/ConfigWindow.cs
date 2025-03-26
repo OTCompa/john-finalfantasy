@@ -10,7 +10,7 @@ namespace JohnFinalfantasy.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    private Configuration Configuration;
+    private Configuration configuration;
 
 
     private string[] firstName = new string[8];
@@ -27,10 +27,10 @@ public class ConfigWindow : Window, IDisposable
 
         Size = new Vector2(400, 365);
 
-        Configuration = plugin.Configuration;
+        configuration = plugin.Configuration;
         for ( int i = 0; i < 8; i++ )
         {
-            var name = Configuration.PartyNames[i].Split(' ', 2);
+            var name = configuration.PartyNames[i].Split(' ', 2);
             this.firstName[i] = name[0];
             this.lastName[i] = name[1];
         }
@@ -42,31 +42,31 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        var enable = Configuration.Enabled;
+        var enable = configuration.Enabled;
         if (ImGui.Checkbox("Enable for all text", ref enable))
         {
-            Configuration.Enabled = enable;
-            Configuration.Save();
+            configuration.Enabled = enable;
+            configuration.Save();
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
         {
             ImGui.SetTooltip("All text like chatbox, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
         }
 
-        var self = Configuration.EnableForSelf;
+        var self = configuration.EnableForSelf;
         if (ImGui.Checkbox("Self", ref self))
         {
-            Configuration.EnableForSelf = self;
-            Configuration.Save();
+            configuration.EnableForSelf = self;
+            configuration.Save();
             this.plugin.Obscurer.ResetPartyList();
             this.plugin.Obscurer.partySize = -1;
         }
 
-        var party = Configuration.EnableForParty;
+        var party = configuration.EnableForParty;
         if (ImGui.Checkbox("Party", ref party))
         {
-            Configuration.EnableForParty = party;
-            Configuration.Save();
+            configuration.EnableForParty = party;
+            configuration.Save();
             this.plugin.Obscurer.ResetPartyList();
             this.plugin.Obscurer.partySize = -1;
         }
@@ -97,14 +97,14 @@ public class ConfigWindow : Window, IDisposable
                 var first = firstName[i];
                 var last = lastName[i];
                 var name = first + " " + last;
-                Configuration.PartyNames[i] = name;
+                configuration.PartyNames[i] = name;
             }
-            Configuration.Save();
-            if (Configuration.EnableForSelf)
+            configuration.Save();
+            if (configuration.EnableForSelf)
             {
                 this.plugin.UpdateSelf("", "");
             }
-            if (Configuration.EnableForParty)
+            if (configuration.EnableForParty)
             {
                 this.plugin.UpdateParty("", "");
             }

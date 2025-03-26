@@ -11,6 +11,7 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
+using Dalamud.Utility;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable
@@ -32,13 +33,13 @@ internal unsafe class Obscurer : IDisposable
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
-        this.Plugin.Functions.AtkTextNodeSetText += this.OnAtkTextNodeSetText;
+        this.Plugin.Functions.OnAtkTextNodeSetText += this.OnAtkTextNodeSetText;
     }
 
 
     public unsafe void Dispose()
     {
-        this.Plugin.Functions.AtkTextNodeSetText -= this.OnAtkTextNodeSetText;
+        this.Plugin.Functions.OnAtkTextNodeSetText -= this.OnAtkTextNodeSetText;
         Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
         if (this.stateChanged) ResetPartyList();
@@ -163,7 +164,8 @@ internal unsafe class Obscurer : IDisposable
     private bool ChangeCrPartyNames(SeString text)
     {
         bool changed = false;
-        var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
+        var playerParty = InfoProxyCrossRealm.Instance()->LocalPlayerGroupIndex;
+        var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[playerParty];
         var numMembers = (int)crParty.GroupMemberCount;
 
         for (int i = 1; i < numMembers; i++)
@@ -280,7 +282,7 @@ internal unsafe class Obscurer : IDisposable
         for (int i = 1; i < numMembers; i++)
         {
             var pMember = localParty->PartyMembers[i];
-            string? original = Marshal.PtrToStringUTF8((nint)pMember.Name);
+            string? original = pMember.Name.ExtractText();
             if (string.IsNullOrEmpty(original)) continue;
             var replacement = this.Plugin.Configuration.PartyNames[i];
             var contentId = pMember.ContentId;

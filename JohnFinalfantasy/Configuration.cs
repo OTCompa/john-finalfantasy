@@ -16,11 +16,11 @@ public class Configuration : IPluginConfiguration
     public List<string> PartyNames { get; set; } = new List<string>();
     // the below exist just to make saving less cumbersome
     [NonSerialized]
-    private IDalamudPluginInterface? PluginInterface;
+    private IDalamudPluginInterface? pluginInterface;
 
     public void Initialize(IDalamudPluginInterface pluginInterface)
     {
-        PluginInterface = pluginInterface;
+        this.pluginInterface = pluginInterface;
         if (PartyNames.Count == 0)
         {
             string[] nums = ["one", "two", "three", "four", "five", "six", "seven", "eight"];
@@ -33,6 +33,6 @@ public class Configuration : IPluginConfiguration
 
     public void Save()
     {
-        PluginInterface!.SavePluginConfig(this);
+        pluginInterface!.SavePluginConfig(this);
     }
 }

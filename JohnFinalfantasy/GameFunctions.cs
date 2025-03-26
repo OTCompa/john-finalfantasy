@@ -31,7 +31,7 @@ internal class GameFunctions : IDisposable
 
     internal delegate void AtkTextNodeSetTextEventDelegate(IntPtr node, IntPtr text, ref SeString? overwrite);
 
-    internal event AtkTextNodeSetTextEventDelegate? AtkTextNodeSetText;
+    internal event AtkTextNodeSetTextEventDelegate? OnAtkTextNodeSetText;
     #endregion
 
     private Plugin Plugin { get; }
@@ -60,7 +60,7 @@ internal class GameFunctions : IDisposable
     private unsafe void AtkTextNodeSetTextDetour(IntPtr node, IntPtr text)
     {
         SeString? overwrite = null;
-        this.AtkTextNodeSetText?.Invoke(node, text, ref overwrite);
+        this.OnAtkTextNodeSetText?.Invoke(node, text, ref overwrite);
 
         if (overwrite != null)
         {

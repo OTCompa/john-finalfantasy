@@ -19,7 +19,7 @@ internal static class Util {
         foreach (var payload in text.Payloads) {
             switch (payload) {
                 case TextPayload txt:
-                    txt.Text = txt.Text.Replace(name, replacement);
+                    txt.Text = txt?.Text?.Replace(name, replacement);
 
                     break;
             }
