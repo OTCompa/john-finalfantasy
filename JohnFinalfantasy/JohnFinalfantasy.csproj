@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/12.0.2">
 
   <PropertyGroup>
-    <Version>1.0.1.3</Version>
+    <Version>1.0.2.1</Version>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Description>A plugin that replaces the names of players in your party with preset names. Based on Nomina Occulta by anna.lgbt.</Description>
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>

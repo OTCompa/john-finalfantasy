@@ -87,6 +87,7 @@ public class ConfigWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.InputText("##Last", ref lastName[i], 20);
             ImGui.TableNextRow();
+            ImGui.PopID();
         }
 
         ImGui.TableNextColumn();
