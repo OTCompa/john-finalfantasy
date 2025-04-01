@@ -22,14 +22,13 @@ internal unsafe class Obscurer : IDisposable
     internal bool stateChanged { get; set; } = false;
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
+    internal bool isFirst { get; set; } = true;
 
     internal unsafe Obscurer(Plugin plugin)
     {
         this.Plugin = plugin;
         playerList = new PlayerList();
 
-        if (this.Plugin.Configuration.EnableForSelf) UpdateSelf();
-        if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
@@ -52,6 +51,12 @@ internal unsafe class Obscurer : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        if (isFirst)
+        {
+            if (this.Plugin.Configuration.EnableForSelf) UpdateSelf();
+            if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
+            isFirst = false;
+        }
         var isCrossRealm = InfoProxyCrossRealm.IsCrossRealmParty();
         int partySize = 0;
 
