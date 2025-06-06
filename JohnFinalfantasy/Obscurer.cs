@@ -1,17 +1,9 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Client.System.String;
 using Dalamud.Game.ClientState.Objects.SubKinds;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Client.Game.InstanceContent;
-using FFXIVClientStructs.FFXIV.Client.Game.Event;
-using Dalamud.Utility;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable
@@ -26,14 +18,16 @@ internal unsafe class Obscurer : IDisposable
 
     private LocalPartyHandler localPartyHandler { get; set; }
     private CrossRealmPartyHandler crossRealmPartyHandler { get; set; }
+    private PartyHandler currentPartyHandler { get; set; }
 
-    internal unsafe Obscurer(Plugin plugin)
+    internal Obscurer(Plugin plugin)
     {
         this.Plugin = plugin;
         playerList = new PlayerList();
 
         localPartyHandler = new(plugin, ref stateChanged, ref playerList);
         crossRealmPartyHandler = new(plugin, ref stateChanged, ref playerList);
+        currentPartyHandler = localPartyHandler;
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
@@ -41,7 +35,7 @@ internal unsafe class Obscurer : IDisposable
     }
 
 
-    public unsafe void Dispose()
+    public void Dispose()
     {
         this.Plugin.Functions.OnAtkTextNodeSetText -= this.OnAtkTextNodeSetText;
         Service.ClientState.Login -= this.OnLogin;
@@ -50,7 +44,7 @@ internal unsafe class Obscurer : IDisposable
     }
     private void OnLogin()
     {
-        if (this.Plugin.Configuration.EnableForSelf) localPartyHandler.UpdateSelf();
+        if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdateSelf();
         if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
     }
 
@@ -58,22 +52,24 @@ internal unsafe class Obscurer : IDisposable
     {
         if (isFirst)
         {
-            if (this.Plugin.Configuration.EnableForSelf) localPartyHandler.UpdateSelf();
+            if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdateSelf();
             if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
             isFirst = false;
         }
         var isCrossRealm = InfoProxyCrossRealm.IsCrossRealmParty();
-        int partySize = 0;
+        var partySize = 0;
 
         // get party list length
         if (isCrossRealm)
         {
-            var crossRealmGroup = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
-            partySize = (int)crossRealmGroup.GroupMemberCount;
+            var crossRealmGroup = Util.GetLocalPlayerCrossRealmGroup();
+            partySize = crossRealmGroup.GroupMemberCount;
+            currentPartyHandler = crossRealmPartyHandler;
         }
         else
         {
             partySize = Service.PartyList.Length;
+            currentPartyHandler = localPartyHandler;
         }
 
         // check if state changed, update if not
@@ -85,7 +81,7 @@ internal unsafe class Obscurer : IDisposable
         // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
-            if (!localPartyHandler.UpdateSelf()) this.partySize = -1;
+            if (!currentPartyHandler.UpdateSelf()) this.partySize = -1;
         }
         if (this.Plugin.Configuration.EnableForParty)
         {
@@ -110,8 +106,7 @@ internal unsafe class Obscurer : IDisposable
             return;
         }
 
-        var changed = this.ChangeNames(text);
-        if (changed) overwrite = text;
+        if (ChangeNames(text)) overwrite = text;
     }
 
 
@@ -133,22 +128,18 @@ internal unsafe class Obscurer : IDisposable
         var changed = false;
         var player = Service.ClientState.LocalPlayer;
         var playerContentId = Service.ClientState.LocalContentId;
+
         if (player != null && this.Plugin.Configuration.EnableForSelf)
         {
-            bool temp = ChangeSelfName(player, playerContentId, text);
-            if (temp) changed = temp;
+            changed |= ChangeSelfName(player, playerContentId, text);
         }
 
         if (this.Plugin.Configuration.EnableForParty)
         {
-            bool temp;
-            if (InfoProxyCrossRealm.IsCrossRealmParty())
-                temp = crossRealmPartyHandler.ChangePartyNames(text);
-            else
-                temp = localPartyHandler.ChangePartyNames(text);
-
-            if (temp) changed = temp;
+            // TODO: update this for rearranged localplayer on party list
+            changed |= currentPartyHandler.ChangePartyNames(text);
         }
+
         return changed;
     }
 
@@ -173,16 +164,13 @@ internal unsafe class Obscurer : IDisposable
 
     internal bool UpdatePartyList(int expected = 0)
     {
-        bool ret;
-
-        if (InfoProxyCrossRealm.IsCrossRealmParty())
-            ret = crossRealmPartyHandler.UpdatePartyList();
-        else
-            ret = localPartyHandler.UpdatePartyList(expected);
-
+        var ret = currentPartyHandler.UpdatePartyList(expected);
         stateChanged = true;
         return ret;
     }
+
+    // TODO: update this for rearranged localplayer on party list
+    public void UpdateSelf() => currentPartyHandler.UpdateSelf();
 
     /*
      *  Reset

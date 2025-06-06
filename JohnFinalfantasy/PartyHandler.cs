@@ -53,6 +53,7 @@ namespace JohnFinalfantasy
             }
 
             var textNode = hudParty->PartyMembers[pos].Name;
+            Service.PluginLog.Debug(textNode->NodeText.ToString());
             string? prefix = Util.GetPrefix(textNode->NodeText);
             if (!string.IsNullOrEmpty(prefix))
             {

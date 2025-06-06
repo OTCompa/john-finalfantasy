@@ -17,8 +17,7 @@ namespace JohnFinalfantasy
         public override unsafe bool ChangePartyNames(SeString text)
         {
             bool changed = false;
-            var playerParty = InfoProxyCrossRealm.Instance()->LocalPlayerGroupIndex;
-            var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[playerParty];
+            var crParty = Util.GetLocalPlayerCrossRealmGroup();
             var numMembers = (int)crParty.GroupMemberCount;
 
             for (int i = 1; i < numMembers; i++)
@@ -39,7 +38,7 @@ namespace JohnFinalfantasy
         public override unsafe bool UpdatePartyList(int expected = 0)
         {
             var infoProxyCrossRealm = InfoProxyCrossRealm.Instance();
-            var crParty = infoProxyCrossRealm->CrossRealmGroups[0];
+            var crParty = Util.GetLocalPlayerCrossRealmGroup();
             var numMembers = (int)crParty.GroupMemberCount;
             var ret = true;
             for (int i = 1; i < numMembers; i++)
@@ -61,7 +60,7 @@ namespace JohnFinalfantasy
         public override unsafe void ResetPartyNames()
         {
             var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-            var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
+            var crParty = Util.GetLocalPlayerCrossRealmGroup();
             if (hudParty == null)
             {
                 Service.PluginLog.Error("HUD is null");

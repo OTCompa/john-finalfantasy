@@ -4,12 +4,16 @@ using System.Text.RegularExpressions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace JohnFinalfantasy;
 
 internal static class Util {
     internal static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
-    internal static readonly Regex LevelPrefix = new("^((?:\u0002\u001a\u0002\u0002\u0003\u0002\u0012\u0002\\?\u0003)?[][-?]+\\s(?:\u0002\u0012\u0002Y\u0003)?\\s?)(.*)$", RegexOptions.Compiled);
+
+    // group 1 matches everything up till the first uppercase letter that's not between the payload bytes (\x02 and \x03)
+    internal static readonly Regex LevelPrefix = new("^((?:\u0002.*\u0003|[^A-Z])+)(.*)$", RegexOptions.Compiled);
+    //  Frey Luna
 
     internal static void ReplacePlayerName(this SeString text, string name, string replacement) {
         if (string.IsNullOrEmpty(name)) {
@@ -26,10 +30,7 @@ internal static class Util {
         }
     }
 
-    private static MatchCollection MatchHudTextNode(Utf8String textNode)
-    {
-        return Util.LevelPrefix.Matches(textNode.ToString()!);
-    }
+    private static MatchCollection MatchHudTextNode(Utf8String textNode) => LevelPrefix.Matches(textNode.ToString());
 
     // this should fail for "Viewing Cutscene", which is intentional
     // any other case isn't tho
@@ -72,4 +73,11 @@ internal static class Util {
 
         return bytes.ToArray();
     }
+
+    internal static unsafe CrossRealmGroup GetLocalPlayerCrossRealmGroup()
+    {
+        var playerParty = InfoProxyCrossRealm.Instance()->LocalPlayerGroupIndex;
+        return InfoProxyCrossRealm.Instance()->CrossRealmGroups[playerParty];
+    }
+
 }
