@@ -17,18 +17,23 @@ namespace JohnFinalfantasy;
 internal unsafe class Obscurer : IDisposable
 {
     private Plugin Plugin { get; }
-    internal PlayerList playerList { get; set; }
+    internal PlayerList playerList;
 
-    internal bool stateChanged { get; set; } = false;
+    internal bool stateChanged = false;
     internal int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
     internal bool isFirst { get; set; } = true;
+
+    private LocalPartyHandler localPartyHandler { get; set; }
+    private CrossRealmPartyHandler crossRealmPartyHandler { get; set; }
 
     internal unsafe Obscurer(Plugin plugin)
     {
         this.Plugin = plugin;
         playerList = new PlayerList();
 
+        localPartyHandler = new(plugin, ref stateChanged, ref playerList);
+        crossRealmPartyHandler = new(plugin, ref stateChanged, ref playerList);
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
@@ -45,7 +50,7 @@ internal unsafe class Obscurer : IDisposable
     }
     private void OnLogin()
     {
-        if (this.Plugin.Configuration.EnableForSelf) UpdateSelf();
+        if (this.Plugin.Configuration.EnableForSelf) localPartyHandler.UpdateSelf();
         if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
     }
 
@@ -53,7 +58,7 @@ internal unsafe class Obscurer : IDisposable
     {
         if (isFirst)
         {
-            if (this.Plugin.Configuration.EnableForSelf) UpdateSelf();
+            if (this.Plugin.Configuration.EnableForSelf) localPartyHandler.UpdateSelf();
             if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
             isFirst = false;
         }
@@ -80,7 +85,7 @@ internal unsafe class Obscurer : IDisposable
         // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
-            if (!UpdateSelf()) this.partySize = -1;
+            if (!localPartyHandler.UpdateSelf()) this.partySize = -1;
         }
         if (this.Plugin.Configuration.EnableForParty)
         {
@@ -136,17 +141,13 @@ internal unsafe class Obscurer : IDisposable
 
         if (this.Plugin.Configuration.EnableForParty)
         {
+            bool temp;
             if (InfoProxyCrossRealm.IsCrossRealmParty())
-            {
-                bool temp = ChangeCrPartyNames(text);
-                if (temp) changed = temp;
-
-            }
+                temp = crossRealmPartyHandler.ChangePartyNames(text);
             else
-            {
-                bool temp = ChangeLocalPartyNames(text);
-                if (temp) changed = temp;
-            }
+                temp = localPartyHandler.ChangePartyNames(text);
+
+            if (temp) changed = temp;
         }
         return changed;
     }
@@ -165,187 +166,22 @@ internal unsafe class Obscurer : IDisposable
         return false;
     }
 
-    // untested in alliance raids, future reminder to look at this if they give any issues
-    private bool ChangeCrPartyNames(SeString text)
-    {
-        bool changed = false;
-        var playerParty = InfoProxyCrossRealm.Instance()->LocalPlayerGroupIndex;
-        var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[playerParty];
-        var numMembers = (int)crParty.GroupMemberCount;
-
-        for (int i = 1; i < numMembers; i++)
-        {
-            var pMember = crParty.GroupMembers[i];
-            string? name = pMember.NameString;
-
-            if (string.IsNullOrEmpty(name)) continue;
-            if (!playerList.GetReplacement(pMember.ContentId, out var replacement)) continue;
-
-            text.ReplacePlayerName(name, replacement!);
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    private bool ChangeLocalPartyNames(SeString text)
-    {
-        bool changed = false;
-        var selfContentId = Service.ClientState.LocalContentId;
-
-        foreach (var pMember in Service.PartyList)
-        {
-            if ((ulong)pMember.ContentId == selfContentId) continue;
-            string name = pMember.Name.ToString();
-            if (!playerList.GetReplacement((ulong)pMember.ContentId, out var replacement)) continue;
-
-            text.ReplacePlayerName(name, replacement!);
-            changed = true;
-        }
-
-        return changed;
-    }
-
-
     /*
      *  Update
      *  Updates current names in party list
      */
 
-    internal bool UpdateSelf()
-    {
-        var player = Service.ClientState.LocalPlayer;
-        var playerContentId = Service.ClientState.LocalContentId;
-
-        if (player == null) return false;
-        var originalName = player.Name.ToString();
-        var replacement = this.Plugin.Configuration.PartyNames[0];
-        playerList.AddEntry(playerContentId, originalName, replacement);
-
-        Service.PluginLog.Info("Self updating: " + originalName + " -> " + replacement);
-        updatePartyListHelper(playerContentId, 0);
-        stateChanged = true;
-        return true;
-    }
-
     internal bool UpdatePartyList(int expected = 0)
     {
-        var ret = true;
+        bool ret;
+
         if (InfoProxyCrossRealm.IsCrossRealmParty())
-        {
-            ret = updateCrPartyList();
-        }
+            ret = crossRealmPartyHandler.UpdatePartyList();
         else
-        {
-            ret = updateLocalPartyList(expected);
-        }
+            ret = localPartyHandler.UpdatePartyList(expected);
+
         stateChanged = true;
         return ret;
-    }
-
-    private bool updateCrPartyList()
-    {
-        var infoProxyCrossRealm = InfoProxyCrossRealm.Instance();
-        var crParty = infoProxyCrossRealm->CrossRealmGroups[0];
-        var numMembers = (int)crParty.GroupMemberCount;
-        var ret = true;
-        for (int i = 1; i < numMembers; i++)
-        {
-            var pMember = crParty.GroupMembers[i];
-            var contentId = pMember.ContentId;
-            var original = pMember.NameString;
-            var replacement = this.Plugin.Configuration.PartyNames[i];
-            playerList.AddEntry(contentId, original, replacement);
-
-            if (!updatePartyListHelper(contentId, i))
-            {
-                ret = false;
-            }
-        }
-        return ret;
-    }
-
-    private bool updateLocalPartyList(int expected)
-    {
-        bool ret = true;
-        var playerContentId = Service.ClientState.LocalContentId;
-
-        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        if (hudParty == null)
-        {
-            Service.PluginLog.Error("HUD is null");
-            return false;
-        }
-
-        var numMembers = hudParty->MemberCount;
-        var localParty = AgentModule.Instance()->GetAgentHUD();
-        if (numMembers < expected)
-        {
-            ret = false;
-        }
-
-        for (int i = 1; i < numMembers; i++)
-        {
-            var pMember = localParty->PartyMembers[i];
-            string? original = pMember.Name.ExtractText();
-            if (string.IsNullOrEmpty(original)) continue;
-            var replacement = this.Plugin.Configuration.PartyNames[i];
-            var contentId = pMember.ContentId;
-            playerList.AddEntry(contentId, original!, replacement);
-            if (ret)
-            {
-                Service.PluginLog.Info("Local party updating: " + original + " -> " + replacement);
-                updatePartyListHelper(contentId, i);
-            }
-        }
-
-        return ret;
-    }
-
-    private bool updatePartyListHelper(ulong contentId, int pos)
-    {
-        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        if (hudParty == null)
-        {
-            Service.PluginLog.Error("HUD is null");
-            return false;
-        }
-
-        var textNode = hudParty->PartyMembers[pos].Name;
-        string? prefix = Util.GetPrefix(textNode->NodeText);
-        if (!string.IsNullOrEmpty(prefix))
-        {
-            if (!playerList.UpdateEntryTextNode(contentId, textNode))
-            {
-                Service.PluginLog.Error("Unable to update player's text node: " + contentId.ToString());
-                return false;
-            }
-            if (!playerList.GetReplacement(contentId, out var replacement))
-            {
-                Service.PluginLog.Error("Unable to retrieve replacement name: " + contentId.ToString());
-                return false;
-            }
-            textNode->SetText(prefix + replacement!);
-        }
-        else
-        {
-            if (textNode->NodeText.ToString() != "Viewing Cutscene")
-            {
-                // PvP
-                if (!playerList.UpdateEntryTextNode(contentId, textNode))
-                {
-                    Service.PluginLog.Error("Unable to update player's text node: " + contentId.ToString());
-                    return false;
-                }
-                if (!playerList.GetReplacement(contentId, out var replacement))
-                {
-                    Service.PluginLog.Error("Unable to retrieve replacement name: " + contentId.ToString());
-                    return false;
-                }
-                textNode->SetText(replacement!);
-            }
-        }
-        return true;
     }
 
     /*
@@ -356,73 +192,10 @@ internal unsafe class Obscurer : IDisposable
     {
         var numMembers = InfoProxyCrossRealm.GetPartyMemberCount();
         if (Service.PartyList.Length == 0 && numMembers != 0)
-        {
-            ResetCrPartyNames();
-        } else
-        {
-            ResetLocalPartyNames();
-        }
+            crossRealmPartyHandler.ResetPartyNames();
+        else
+            localPartyHandler.ResetPartyNames();
+
         stateChanged = false;
-    }
-
-    private void ResetCrPartyNames()
-    {
-        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        var crParty = InfoProxyCrossRealm.Instance()->CrossRealmGroups[0];
-        if (hudParty == null)
-        {
-            Service.PluginLog.Error("HUD is null");
-            return;
-        }
-
-        for (int i = 0; i < crParty.GroupMemberCount; i++)
-        {
-            var pMember = crParty.GroupMembers[i];
-            var name = pMember.NameString;
-            var contentId = pMember.ContentId;
-            if (string.IsNullOrEmpty(name)) continue;
-            updateTextNodePtr(contentId, hudParty->PartyMembers[i]);
-            resetPartyHelper(contentId);
-        }
-    }
-
-    private void ResetLocalPartyNames()
-    {
-        var agentHud = AgentModule.Instance()->GetAgentHUD();
-        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
-        if (hudParty == null)
-        {
-            Service.PluginLog.Error("HUD is null");
-            return;
-        }
-
-        for (int i = 0; i < agentHud->PartyMemberCount; i++)
-        {
-            var pMember = agentHud->PartyMembers[i];
-            var contentId = pMember.ContentId;
-            updateTextNodePtr(contentId, hudParty->PartyMembers[i]);
-            resetPartyHelper(contentId);
-        }
-    }
-
-    private void resetPartyHelper(ulong contentId)
-    {
-        if (!playerList.GetOriginal(contentId, out var original))
-        {
-            return;
-        }
-        if (!playerList.GetTextNode(contentId, out var textNode))
-        {
-            return;
-        }
-
-        string? prefix = Util.GetPrefix(textNode->NodeText);
-        if (string.IsNullOrEmpty(prefix)) textNode->SetText(original!);
-        else textNode->SetText(prefix + original!);
-    }
-
-    private void updateTextNodePtr(ulong contentId, AddonPartyList.PartyListMemberStruct partyMember)
-    {
-        playerList.UpdateEntryTextNode(contentId, partyMember.Name);
     }
 }
