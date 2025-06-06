@@ -15,7 +15,7 @@ namespace JohnFinalfantasy
         public LocalPartyHandler(Plugin plugin, ref bool stateChanged, ref PlayerList playerList)
             : base(plugin, ref stateChanged, ref playerList) {}
 
-        public override bool ChangePartyNames(SeString text)
+        public override bool ReplacePartyMemberNames(SeString text)
         {
             bool changed = false;
             var selfContentId = Service.ClientState.LocalContentId;
@@ -70,7 +70,7 @@ namespace JohnFinalfantasy
             return ret;
         }
 
-        public override unsafe void ResetPartyNames()
+        public override unsafe void ResetPartyList()
         {
             var agentHud = AgentModule.Instance()->GetAgentHUD();
             var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");

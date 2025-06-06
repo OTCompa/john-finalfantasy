@@ -14,7 +14,7 @@ namespace JohnFinalfantasy
         public CrossRealmPartyHandler(Plugin plugin, ref bool stateChanged, ref PlayerList playerList)
             : base(plugin, ref stateChanged, ref playerList) {}
 
-        public override unsafe bool ChangePartyNames(SeString text)
+        public override unsafe bool ReplacePartyMemberNames(SeString text)
         {
             bool changed = false;
             var crParty = Util.GetLocalPlayerCrossRealmGroup();
@@ -57,7 +57,7 @@ namespace JohnFinalfantasy
             return ret;
         }
 
-        public override unsafe void ResetPartyNames()
+        public override unsafe void ResetPartyList()
         {
             var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
             var crParty = Util.GetLocalPlayerCrossRealmGroup();

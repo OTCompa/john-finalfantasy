@@ -34,8 +34,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
-
-
         Service.Initialize(PluginInterface);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -48,13 +46,6 @@ public sealed class Plugin : IDalamudPlugin
         WhoWindow = new WhoWindow(this);
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
-
-#if DEBUG
-            CommandManager.AddHandler("/testcommand", new CommandInfo(TestCommand)
-            {
-                HelpMessage = "test debug"
-            });
-#endif
 
         CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
@@ -96,7 +87,6 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Force reset the party list, debug command"
         });
 
-
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // This adds a button to the plugin installer entry of this plugin which allows
@@ -107,7 +97,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
-
         CommandManager.RemoveHandler(DebugCommandResetParty);
         CommandManager.RemoveHandler(DebugCommandUpdateParty);
         CommandManager.RemoveHandler(DebugCommandUpdateSelf);
@@ -116,18 +105,12 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(CommandToggleSelf);
         CommandManager.RemoveHandler(CommandWho);
         CommandManager.RemoveHandler(CommandConfig);
-#if DEBUG
-            CommandManager.RemoveHandler("/testcommand");
-#endif
+
         Obscurer.Dispose();
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();
         ConfigWindow.Dispose();
 
-    }
-
-    private unsafe void TestCommand(string command, string args)
-    {
     }
 
     private void ToggleSelf(string command, string args)
@@ -174,7 +157,7 @@ public sealed class Plugin : IDalamudPlugin
 
     internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();
     internal void ResetParty(string command, string args) => Obscurer.ResetPartyList();
-    internal void UpdateSelf(string command, string args) => Obscurer.UpdateSelf();
+    internal void UpdateSelf(string command, string args) => Obscurer.UpdatePartyListForSelf();
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();

@@ -22,11 +22,11 @@ namespace JohnFinalfantasy
             this.playerList = playerList;
         }
 
-        public abstract bool ChangePartyNames(SeString text);
+        public abstract bool ReplacePartyMemberNames(SeString text);
         public abstract bool UpdatePartyList(int expected);
-        public abstract void ResetPartyNames();
+        public abstract void ResetPartyList();
 
-        public bool UpdateSelf()
+        public bool UpdatePartyListForSelf()
         {
             var player = Service.ClientState.LocalPlayer;
             var playerContentId = Service.ClientState.LocalContentId;

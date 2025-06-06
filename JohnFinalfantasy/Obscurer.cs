@@ -34,7 +34,6 @@ internal unsafe class Obscurer : IDisposable
         this.Plugin.Functions.OnAtkTextNodeSetText += this.OnAtkTextNodeSetText;
     }
 
-
     public void Dispose()
     {
         this.Plugin.Functions.OnAtkTextNodeSetText -= this.OnAtkTextNodeSetText;
@@ -42,9 +41,10 @@ internal unsafe class Obscurer : IDisposable
         Service.Framework.Update -= this.OnFrameworkUpdate;
         if (this.stateChanged) ResetPartyList();
     }
+
     private void OnLogin()
     {
-        if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdateSelf();
+        if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdatePartyListForSelf();
         if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
     }
 
@@ -52,7 +52,7 @@ internal unsafe class Obscurer : IDisposable
     {
         if (isFirst)
         {
-            if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdateSelf();
+            if (this.Plugin.Configuration.EnableForSelf) currentPartyHandler.UpdatePartyListForSelf();
             if (this.Plugin.Configuration.EnableForParty) UpdatePartyList();
             isFirst = false;
         }
@@ -81,7 +81,7 @@ internal unsafe class Obscurer : IDisposable
         // ensure functions keep executing until every player is loaded in 
         if (this.Plugin.Configuration.EnableForSelf)
         {
-            if (!currentPartyHandler.UpdateSelf()) this.partySize = -1;
+            if (!currentPartyHandler.UpdatePartyListForSelf()) this.partySize = -1;
         }
         if (this.Plugin.Configuration.EnableForParty)
         {
@@ -106,24 +106,15 @@ internal unsafe class Obscurer : IDisposable
             return;
         }
 
-        if (ChangeNames(text)) overwrite = text;
+        if (ReplaceNamesInSeString(text)) overwrite = text;
     }
-
-
-    /*
-     *  Change
-     *  updates all non party list related text nodes
-     */
 
     // PERFORMANCE NOTE: This potentially loops over the party list twice and the object
     //                   table once entirely. Should be avoided if being used in a
     //                   position where the player to replace is known.
-    private bool ChangeNames(SeString text)
+    private bool ReplaceNamesInSeString(SeString text)
     {
-        if (!this.Plugin.Configuration.Enabled)
-        {
-            return false;
-        }
+        if (!this.Plugin.Configuration.Enabled) return false;
 
         var changed = false;
         var player = Service.ClientState.LocalPlayer;
@@ -131,19 +122,19 @@ internal unsafe class Obscurer : IDisposable
 
         if (player != null && this.Plugin.Configuration.EnableForSelf)
         {
-            changed |= ChangeSelfName(player, playerContentId, text);
+            changed |= ReplacePlayerName(player, playerContentId, text);
         }
 
         if (this.Plugin.Configuration.EnableForParty)
         {
             // TODO: update this for rearranged localplayer on party list
-            changed |= currentPartyHandler.ChangePartyNames(text);
+            changed |= currentPartyHandler.ReplacePartyMemberNames(text);
         }
 
         return changed;
     }
 
-    private bool ChangeSelfName(IPlayerCharacter player, ulong contentId, SeString text)
+    private bool ReplacePlayerName(IPlayerCharacter player, ulong contentId, SeString text)
     {
         if (player != null)
         {
@@ -157,11 +148,6 @@ internal unsafe class Obscurer : IDisposable
         return false;
     }
 
-    /*
-     *  Update
-     *  Updates current names in party list
-     */
-
     internal bool UpdatePartyList(int expected = 0)
     {
         var ret = currentPartyHandler.UpdatePartyList(expected);
@@ -169,21 +155,17 @@ internal unsafe class Obscurer : IDisposable
         return ret;
     }
 
-    // TODO: update this for rearranged localplayer on party list
-    public void UpdateSelf() => currentPartyHandler.UpdateSelf();
-
-    /*
-     *  Reset
-     */
-
-    internal unsafe void ResetPartyList()
+    internal void ResetPartyList()
     {
         var numMembers = InfoProxyCrossRealm.GetPartyMemberCount();
         if (Service.PartyList.Length == 0 && numMembers != 0)
-            crossRealmPartyHandler.ResetPartyNames();
+            crossRealmPartyHandler.ResetPartyList();
         else
-            localPartyHandler.ResetPartyNames();
+            localPartyHandler.ResetPartyList();
 
         stateChanged = false;
     }
+
+    // TODO: update this for rearranged localplayer on party list
+    public void UpdatePartyListForSelf() => currentPartyHandler.UpdatePartyListForSelf();
 }
