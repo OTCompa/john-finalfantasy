@@ -1,9 +1,12 @@
-using System;
-using System.Linq;
+using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using Dalamud.Game.ClientState.Objects.SubKinds;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable
@@ -31,6 +34,7 @@ internal unsafe class Obscurer : IDisposable
 
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
+        Service.NamePlateGui.OnDataUpdate += NamePlateGuiOnOnDataUpdate;
         this.Plugin.Functions.OnAtkTextNodeSetText += this.OnAtkTextNodeSetText;
     }
 
@@ -39,6 +43,7 @@ internal unsafe class Obscurer : IDisposable
         this.Plugin.Functions.OnAtkTextNodeSetText -= this.OnAtkTextNodeSetText;
         Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
+        Service.NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
         if (this.stateChanged) ResetPartyList();
     }
 
@@ -107,6 +112,25 @@ internal unsafe class Obscurer : IDisposable
         }
 
         if (ReplaceNamesInSeString(text)) overwrite = text;
+    }
+
+    private void NamePlateGuiOnOnDataUpdate(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
+    {
+        if (!this.Plugin.Configuration.EnableForSelf && !this.Plugin.Configuration.EnableForParty) return;
+        foreach (var handler in handlers)
+        {
+            if (handler.NamePlateKind == NamePlateKind.PlayerCharacter)
+            {
+                var chara = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)handler.PlayerCharacter?.Address;
+                if (chara == null) return;
+                var contentId = chara->ContentId;
+                if (playerList.GetReplacement(contentId, out var replacement))
+                {
+                    if (replacement.IsNullOrEmpty()) return;
+                    handler.Name = replacement;
+                }
+            }
+        }
     }
 
     // PERFORMANCE NOTE: This potentially loops over the party list twice and the object

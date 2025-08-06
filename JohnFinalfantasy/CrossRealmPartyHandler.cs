@@ -7,76 +7,75 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JohnFinalfantasy
+namespace JohnFinalfantasy;
+
+internal class CrossRealmPartyHandler : PartyHandler
 {
-    internal class CrossRealmPartyHandler : PartyHandler
+    public CrossRealmPartyHandler(Plugin plugin, ref bool stateChanged, ref PlayerList playerList)
+        : base(plugin, ref stateChanged, ref playerList) {}
+
+    public override unsafe bool ReplacePartyMemberNames(SeString text)
     {
-        public CrossRealmPartyHandler(Plugin plugin, ref bool stateChanged, ref PlayerList playerList)
-            : base(plugin, ref stateChanged, ref playerList) {}
+        bool changed = false;
+        var crParty = Util.GetLocalPlayerCrossRealmGroup();
+        var numMembers = (int)crParty.GroupMemberCount;
 
-        public override unsafe bool ReplacePartyMemberNames(SeString text)
+        for (int i = 1; i < numMembers; i++)
         {
-            bool changed = false;
-            var crParty = Util.GetLocalPlayerCrossRealmGroup();
-            var numMembers = (int)crParty.GroupMemberCount;
+            var pMember = crParty.GroupMembers[i];
+            string? name = pMember.NameString;
 
-            for (int i = 1; i < numMembers; i++)
-            {
-                var pMember = crParty.GroupMembers[i];
-                string? name = pMember.NameString;
+            if (string.IsNullOrEmpty(name)) continue;
+            if (!playerList.GetReplacement(pMember.ContentId, out var replacement)) continue;
 
-                if (string.IsNullOrEmpty(name)) continue;
-                if (!playerList.GetReplacement(pMember.ContentId, out var replacement)) continue;
-
-                text.ReplacePlayerName(name, replacement!);
-                changed = true;
-            }
-
-            return changed;
+            text.ReplacePlayerName(name, replacement!);
+            changed = true;
         }
 
-        public override unsafe bool UpdatePartyList(int expected = 0)
-        {
-            var infoProxyCrossRealm = InfoProxyCrossRealm.Instance();
-            var crParty = Util.GetLocalPlayerCrossRealmGroup();
-            var numMembers = (int)crParty.GroupMemberCount;
-            var ret = true;
-            for (int i = 1; i < numMembers; i++)
-            {
-                var pMember = crParty.GroupMembers[i];
-                var contentId = pMember.ContentId;
-                var original = pMember.NameString;
-                var replacement = this.Plugin.Configuration.PartyNames[i];
-                playerList.AddEntry(contentId, original, replacement);
+        return changed;
+    }
 
-                if (!updatePartyListHelper(contentId, i))
-                {
-                    ret = false;
-                }
+    public override unsafe bool UpdatePartyList(int expected = 0)
+    {
+        var infoProxyCrossRealm = InfoProxyCrossRealm.Instance();
+        var crParty = Util.GetLocalPlayerCrossRealmGroup();
+        var numMembers = (int)crParty.GroupMemberCount;
+        var ret = true;
+        for (int i = 1; i < numMembers; i++)
+        {
+            var pMember = crParty.GroupMembers[i];
+            var contentId = pMember.ContentId;
+            var original = pMember.NameString;
+            var replacement = this.Plugin.Configuration.PartyNames[i];
+            playerList.AddEntry(contentId, original, replacement);
+
+            if (!updatePartyListHelper(contentId, i))
+            {
+                ret = false;
             }
-            return ret;
+        }
+        return ret;
+    }
+
+    public override unsafe void ResetPartyList()
+    {
+        var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
+        var crParty = Util.GetLocalPlayerCrossRealmGroup();
+        if (hudParty == null)
+        {
+            Service.PluginLog.Error("HUD is null");
+            return;
         }
 
-        public override unsafe void ResetPartyList()
+        for (int i = 0; i < crParty.GroupMemberCount; i++)
         {
-            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
-            var crParty = Util.GetLocalPlayerCrossRealmGroup();
-            if (hudParty == null)
-            {
-                Service.PluginLog.Error("HUD is null");
-                return;
-            }
+            var pMember = crParty.GroupMembers[i];
+            var name = pMember.NameString;
+            var contentId = pMember.ContentId;
+            if (string.IsNullOrEmpty(name)) continue;
 
-            for (int i = 0; i < crParty.GroupMemberCount; i++)
-            {
-                var pMember = crParty.GroupMembers[i];
-                var name = pMember.NameString;
-                var contentId = pMember.ContentId;
-                if (string.IsNullOrEmpty(name)) continue;
-
-                playerList.UpdateEntryTextNode(contentId, hudParty->PartyMembers[i].Name);
-                resetPartyHelper(contentId);
-            }
+            playerList.UpdateEntryTextNode(contentId, hudParty->PartyMembers[i].Name);
+            resetPartyHelper(contentId);
         }
     }
 }

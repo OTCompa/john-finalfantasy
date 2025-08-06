@@ -13,6 +13,7 @@ internal class Service
     [PluginService] internal static IFramework Framework { get; set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; set; } = null!;
     [PluginService] internal static IChatGui ChatGUi { get; set; } = null!;
+    [PluginService] internal static INamePlateGui NamePlateGui { get; set; } = null!;
 
     internal static void Initialize(IDalamudPluginInterface pluginInterface)
     {
