@@ -25,7 +25,7 @@ public class ConfigWindow : Window, IDisposable
         this.plugin = plugin;
         Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(400, 365);
+        Size = new Vector2(400, 385);
 
         configuration = plugin.Configuration;
         for ( int i = 0; i < 8; i++ )
@@ -42,17 +42,7 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        var enable = configuration.Enabled;
-        if (ImGui.Checkbox("Enable for all text", ref enable))
-        {
-            configuration.Enabled = enable;
-            configuration.Save();
-        }
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
-        {
-            ImGui.SetTooltip("All text like chatbox, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
-        }
-
+        ImGui.Text("Party list and nameplates");
         var self = configuration.EnableForSelf;
         if (ImGui.Checkbox("Self", ref self))
         {
@@ -62,6 +52,8 @@ public class ConfigWindow : Window, IDisposable
             this.plugin.Obscurer.partySize = -1;
         }
 
+        ImGui.SameLine();
+
         var party = configuration.EnableForParty;
         if (ImGui.Checkbox("Party", ref party))
         {
@@ -70,7 +62,36 @@ public class ConfigWindow : Window, IDisposable
             this.plugin.Obscurer.ResetPartyList();
             this.plugin.Obscurer.partySize = -1;
         }
+
         ImGui.Separator();
+        ImGui.Text("Additional replacements");
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+        {
+            ImGui.SetTooltip("Still requires the corresponding checkboxes above to be enabled.");
+        }
+
+        var enableForChatbox = configuration.EnableForChat;
+        if (ImGui.Checkbox("Enable for chatbox", ref enableForChatbox))
+        {
+            configuration.EnableForChat = enableForChatbox;
+            configuration.Save();
+        }
+
+        ImGui.SameLine();
+
+        var enableForAllText = configuration.EnableForAllText;
+        if (ImGui.Checkbox("Enable for all remaining text", ref enableForAllText))
+        {
+            configuration.EnableForAllText = enableForAllText;
+            configuration.Save();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+        {
+            ImGui.SetTooltip("All other text like character info window, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
+        }
+
+        ImGui.Separator();
+
         using var partyNameTable = ImRaii.Table("PartyTable", 2);
         for (var i = 0; i < 8; i++)
         {

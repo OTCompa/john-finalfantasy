@@ -10,7 +10,8 @@ namespace JohnFinalfantasy;
 public class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
-    public bool Enabled { get; set; } = false;
+    public bool EnableForAllText { get; set; } = false;
+    public bool EnableForChat { get; set; } = false;
     public bool EnableForSelf {  get; set; } = false;
     public bool EnableForParty { get; set; } = false;
     public List<string> PartyNames { get; set; } = new List<string>();

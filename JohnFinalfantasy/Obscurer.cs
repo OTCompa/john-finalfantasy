@@ -1,5 +1,6 @@
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.NamePlate;
+using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
@@ -7,6 +8,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Channels;
 namespace JohnFinalfantasy;
 
 internal unsafe class Obscurer : IDisposable
@@ -35,6 +37,7 @@ internal unsafe class Obscurer : IDisposable
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
         Service.NamePlateGui.OnDataUpdate += NamePlateGuiOnOnDataUpdate;
+        Service.ChatGUi.ChatMessage += OnChatMessage;
         this.Plugin.Functions.OnAtkTextNodeSetText += this.OnAtkTextNodeSetText;
     }
 
@@ -44,6 +47,7 @@ internal unsafe class Obscurer : IDisposable
         Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
         Service.NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
+        Service.ChatGUi.ChatMessage -= OnChatMessage;
         if (this.stateChanged) ResetPartyList();
     }
 
@@ -133,12 +137,32 @@ internal unsafe class Obscurer : IDisposable
         }
     }
 
+    private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+    {
+        if (!this.Plugin.Configuration.EnableForChat) return;
+
+        var player = Service.ClientState.LocalPlayer;
+        var playerContentId = Service.ClientState.LocalContentId;
+
+        if (player != null && this.Plugin.Configuration.EnableForSelf)
+        {
+             ReplacePlayerName(player, playerContentId, sender);
+             ReplacePlayerName(player, playerContentId, message);
+        }
+
+        if (this.Plugin.Configuration.EnableForParty)
+        {
+            currentPartyHandler.ReplacePartyMemberNames(sender);
+            currentPartyHandler.ReplacePartyMemberNames(message);
+        }
+    }
+
     // PERFORMANCE NOTE: This potentially loops over the party list twice and the object
     //                   table once entirely. Should be avoided if being used in a
     //                   position where the player to replace is known.
     private bool ReplaceNamesInSeString(SeString text)
     {
-        if (!this.Plugin.Configuration.Enabled) return false;
+        if (!this.Plugin.Configuration.EnableForAllText) return false;
 
         var changed = false;
         var player = Service.ClientState.LocalPlayer;
