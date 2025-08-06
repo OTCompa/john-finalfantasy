@@ -38,7 +38,7 @@ namespace JohnFinalfantasy
             bool ret = true;
             var playerContentId = Service.ClientState.LocalContentId;
 
-            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
             if (hudParty == null)
             {
                 Service.PluginLog.Error("HUD is null");
@@ -73,7 +73,7 @@ namespace JohnFinalfantasy
         public override unsafe void ResetPartyList()
         {
             var agentHud = AgentModule.Instance()->GetAgentHUD();
-            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
             if (hudParty == null)
             {
                 Service.PluginLog.Error("HUD is null");

@@ -59,7 +59,7 @@ namespace JohnFinalfantasy
 
         public override unsafe void ResetPartyList()
         {
-            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
             var crParty = Util.GetLocalPlayerCrossRealmGroup();
             if (hudParty == null)
             {

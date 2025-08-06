@@ -9,7 +9,7 @@ internal class GameFunctions : IDisposable
 {
     private static class Signatures
     {
-        internal const string AtkTextNodeSetText = "E8 ?? ?? ?? ?? 8D 4E 32";
+        internal const string AtkTextNodeSetText = "E8 ?? ?? ?? ?? 8D 4D 0F";
     }
 
     #region Delegates

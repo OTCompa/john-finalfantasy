@@ -45,7 +45,7 @@ namespace JohnFinalfantasy
 
         protected unsafe bool updatePartyListHelper(ulong contentId, int pos)
         {
-            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList");
+            var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
             if (hudParty == null)
             {
                 Service.PluginLog.Error("HUD is null");

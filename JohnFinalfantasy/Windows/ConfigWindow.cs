@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Text;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace JohnFinalfantasy.Windows;
 
