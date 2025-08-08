@@ -37,7 +37,7 @@ internal unsafe class Obscurer : IDisposable
         Service.ClientState.Login += this.OnLogin;
         Service.Framework.Update += this.OnFrameworkUpdate;
         Service.NamePlateGui.OnDataUpdate += NamePlateGuiOnOnDataUpdate;
-        Service.ChatGUi.ChatMessage += OnChatMessage;
+        Service.ChatGui.ChatMessage += OnChatMessage;
         this.Plugin.Functions.OnAtkTextNodeSetText += this.OnAtkTextNodeSetText;
     }
 
@@ -47,7 +47,7 @@ internal unsafe class Obscurer : IDisposable
         Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
         Service.NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
-        Service.ChatGUi.ChatMessage -= OnChatMessage;
+        Service.ChatGui.ChatMessage -= OnChatMessage;
         if (this.stateChanged) ResetPartyList();
     }
 

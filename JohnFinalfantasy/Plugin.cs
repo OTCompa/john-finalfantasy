@@ -124,7 +124,7 @@ public sealed class Plugin : IDalamudPlugin
                     break;
                 default:
                     var chatMsg = new SeString(new TextPayload("Invalid argument."));
-                    Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+                    Service.ChatGui.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
                     return;
             }
         }
@@ -212,7 +212,7 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             default:
                 var chatMsg = new SeString(new TextPayload("Invalid argument."));
-                Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+                Service.ChatGui.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
                 break;
         }
     }
@@ -230,7 +230,7 @@ public sealed class Plugin : IDalamudPlugin
                 Turn chatbox masking on: /jf chat on
             """
         ));
-        Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+        Service.ChatGui.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
     }
 
     internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();

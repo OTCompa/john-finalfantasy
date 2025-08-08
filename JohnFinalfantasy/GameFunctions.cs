@@ -40,7 +40,7 @@ internal class GameFunctions : IDisposable
     {
         this.Plugin = plugin;
 
-        Service.gameInteropProvider.InitializeFromAttributes(this);
+        Service.GameInteropProvider.InitializeFromAttributes(this);
 
         this.AtkTextNodeSetTextHook.Enable();
 
