@@ -12,6 +12,13 @@ namespace JohnFinalfantasy;
 
 public sealed class Plugin : IDalamudPlugin
 {
+    private enum CommandAction
+    {
+        Off,
+        On,
+        Toggle
+    };
+
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     public Configuration Configuration { get; init; }
@@ -22,16 +29,14 @@ public sealed class Plugin : IDalamudPlugin
     private ConfigWindow ConfigWindow { get; init; }
     private WhoWindow WhoWindow { get; init; }
 
-
+    private const string CommandPrimary = "/jf";
     private const string CommandConfig = "/jfconfig";
     private const string CommandWho = "/jfwho";
-    private const string CommandToggleSelf = "/jfself";
-    private const string CommandToggleParty = "/jfparty";
-    private const string CommandToggleAll = "/jfall";
+#if DEBUG
     private const string DebugCommandUpdateParty = "/updateplist";
     private const string DebugCommandUpdateSelf = "/updateself";
     private const string DebugCommandResetParty = "/resetplist";
-
+#endif
     public Plugin()
     {
         Service.Initialize(PluginInterface);
@@ -47,6 +52,11 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(WhoWindow);
 
+        CommandManager.AddHandler(CommandPrimary, new CommandInfo(PrimaryCommandHandler)
+        {
+            HelpMessage = "Toggle individual John Finalfantasy settings"
+        });
+
         CommandManager.AddHandler(CommandConfig, new CommandInfo(ToggleSettings)
         {
             HelpMessage = "Toggle John Finalfantasy's config UI"
@@ -57,21 +67,7 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Toggle the who's who UI"
         });
 
-        CommandManager.AddHandler(CommandToggleSelf, new CommandInfo(ToggleSelf)
-        {
-            HelpMessage = "Toggle the obscurer for yourself"
-        });
-
-        CommandManager.AddHandler(CommandToggleParty, new CommandInfo(ToggleParty)
-        {
-            HelpMessage = "Toggle the obscurer for your party"
-        });
-
-        CommandManager.AddHandler(CommandToggleAll, new CommandInfo(SetAll)
-        {
-            HelpMessage = "Turn the obscurer on/off.\n Example: \"/jfall on\" or \"jfall off\""
-        });
-
+#if DEBUG
         CommandManager.AddHandler(DebugCommandUpdateSelf, new CommandInfo(UpdateSelf)
         {
             HelpMessage = "Force update yourself, debug command"
@@ -86,7 +82,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = "Force reset the party list, debug command"
         });
-
+#endif
         PluginInterface.UiBuilder.Draw += DrawUI;
 
         // This adds a button to the plugin installer entry of this plugin which allows
@@ -97,12 +93,11 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+#if DEBUG
         CommandManager.RemoveHandler(DebugCommandResetParty);
         CommandManager.RemoveHandler(DebugCommandUpdateParty);
         CommandManager.RemoveHandler(DebugCommandUpdateSelf);
-        CommandManager.RemoveHandler(CommandToggleAll);
-        CommandManager.RemoveHandler(CommandToggleParty);
-        CommandManager.RemoveHandler(CommandToggleSelf);
+#endif
         CommandManager.RemoveHandler(CommandWho);
         CommandManager.RemoveHandler(CommandConfig);
 
@@ -111,6 +106,73 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem.RemoveAllWindows();
         ConfigWindow.Dispose();
 
+    }
+
+    public void PrimaryCommandHandler(string command, string args)
+    {
+        var splitArgs = args.Split(' ');
+        var action = CommandAction.Toggle;
+        if (splitArgs.Length > 1)
+        {
+            switch(splitArgs[1])
+            {
+                case "on":
+                    action = CommandAction.On;
+                    break;
+                case "off":
+                    action = CommandAction.Off;
+                    break;
+                default:
+                    var chatMsg = new SeString(new TextPayload("Invalid argument."));
+                    Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+                    return;
+            }
+        }
+        switch(splitArgs[0])
+        {
+            case "self":
+                HandleSubArgs(Configuration.EnableForSelf, action, out var selfRes);
+                Configuration.EnableForSelf = selfRes;
+                Configuration.Save();
+                break;
+            case "party":
+                HandleSubArgs(Configuration.EnableForParty, action, out var partyRes);
+                Configuration.EnableForParty = partyRes;
+                Configuration.Save();
+                break;
+            case "chat":
+                HandleSubArgs(Configuration.EnableForChat, action, out var chatRes);
+                Configuration.EnableForChat = chatRes;
+                Configuration.Save();
+                break;
+            case "remaining":
+                HandleSubArgs(Configuration.EnableForAllText, action, out var remainingRes);
+                Configuration.EnableForAllText = remainingRes;
+                Configuration.Save();
+                break;
+            default:
+                Usage();
+                break;
+        }
+    }
+
+    private void HandleSubArgs(bool config, CommandAction action, out bool res)
+    {
+        switch (action)
+        {
+            case CommandAction.Off:
+                res = false;
+                break;
+            case CommandAction.On:
+                res = true;
+                break;
+            case CommandAction.Toggle:
+                res = !config;
+                break;
+            default:
+                res = false;
+                break;
+        }
     }
 
     private void ToggleSelf(string command, string args)
@@ -153,6 +215,22 @@ public sealed class Plugin : IDalamudPlugin
                 Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
                 break;
         }
+    }
+
+    private void Usage()
+    {
+        var chatMsg = new SeString(new TextPayload(
+            """
+            Usage:
+                /jf [setting] [OPTIONAL:state]
+                Available settings: self, party, chat, remaining
+                Available states: [blank] (toggle), on, off
+                Examples:
+                Toggle self masking: /jf self
+                Turn chatbox masking on: /jf chat on
+            """
+        ));
+        Service.ChatGUi.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
     }
 
     internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();
