@@ -5,7 +5,7 @@ using System.Text;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
-
+using Dalamud.Interface;
 namespace JohnFinalfantasy.Windows;
 
 public class ConfigWindow : Window, IDisposable
@@ -25,7 +25,7 @@ public class ConfigWindow : Window, IDisposable
         this.plugin = plugin;
         Flags = ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(400, 385);
+        Size = new Vector2(400, 410);
 
         configuration = plugin.Configuration;
         for ( int i = 0; i < 8; i++ )
@@ -42,6 +42,11 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
+        DrawToggles();
+        DrawNameConfig();
+    }
+
+    private void DrawToggles() {
         ImGui.Text("Party list and nameplates");
         var self = configuration.EnableForSelf;
         if (ImGui.Checkbox("Self", ref self))
@@ -91,27 +96,47 @@ public class ConfigWindow : Window, IDisposable
         }
 
         ImGui.Separator();
+    }
 
-        using var partyNameTable = ImRaii.Table("PartyTable", 2);
-        for (var i = 0; i < 8; i++)
+    private void DrawNameConfig()
+    {
+        using (var partyNameTable = ImRaii.Table("PartyTable", 4))
         {
-            ImGui.PushID(i);
-            ImGui.TableNextColumn();
-            ImGui.Text("\t" + (i + 1).ToString() + "\t");
-            ImGui.SameLine();
-            ImGui.Text("First");
-            ImGui.SameLine();
-            ImGui.InputText("##First", ref firstName[i], 20);
-            ImGui.SameLine();
-            ImGui.TableNextColumn();
-            ImGui.Text("Last");
-            ImGui.SameLine();
-            ImGui.InputText("##Last", ref lastName[i], 20);
-            ImGui.TableNextRow();
-            ImGui.PopID();
+            ImGui.TableSetupColumn("Index", ImGuiTableColumnFlags.WidthFixed, 30);
+            ImGui.TableSetupColumn("First Name", ImGuiTableColumnFlags.WidthFixed, 105);
+            ImGui.TableSetupColumn("Last Name", ImGuiTableColumnFlags.WidthFixed, 105);
+            ImGui.TableSetupColumn("Randomize", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableHeadersRow();
+            for (var i = 0; i < 8; i++)
+            {
+                using var id = ImRaii.PushId(i);
+                ImGui.TableNextColumn();
+                ImGui.Text("\t" + (i + 1).ToString() + "\t");
+                ImGui.TableNextColumn();
+                ImRaii.ItemWidth(100);
+                ImGui.InputText("##First", ref firstName[i], 20);
+                ImGui.TableNextColumn();
+                ImRaii.ItemWidth(100);
+                ImGui.InputText("##Last", ref lastName[i], 20);
+                ImGui.TableNextColumn();
+                using (var font = ImRaii.PushFont(UiBuilder.IconFont))
+                {
+                    if (ImGui.Button(FontAwesomeIcon.Redo.ToIconString()))
+                    {
+                        var ret = plugin.Obscurer.currentPartyHandler.GenerateName(i);
+                        firstName[i] = ret.Item1;
+                        lastName[i] = ret.Item2;
+                    }
+                }
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
+                {
+                    ImGui.SetTooltip("Randomize name");
+                }
+                ImGui.TableNextRow();
+
+            }
         }
 
-        ImGui.TableNextColumn();
         if (ImGui.Button("Save Names"))
         {
             for (var i = 0; i < 8; i++)
@@ -132,6 +157,5 @@ public class ConfigWindow : Window, IDisposable
             }
             this.Toggle();
         }
-        
     }
 }

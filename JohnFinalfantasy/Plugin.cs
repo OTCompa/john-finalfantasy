@@ -1,12 +1,16 @@
+using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Command;
+using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.String;
 using JohnFinalfantasy.Windows;
-using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.Text;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
+using System;
 
 namespace JohnFinalfantasy;
 
@@ -28,6 +32,9 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("John Finalfantasy");
     private ConfigWindow ConfigWindow { get; init; }
     private WhoWindow WhoWindow { get; init; }
+
+    public Utf8String? First { get; } = null!;
+    public Utf8String? Last { get; } = null!;
 
     private const string CommandPrimary = "/jf";
     private const string CommandConfig = "/jfconfig";
@@ -85,6 +92,9 @@ public sealed class Plugin : IDalamudPlugin
 #endif
         PluginInterface.UiBuilder.Draw += DrawUI;
 
+        First = new Utf8String("123456789012345");
+        Last = new Utf8String("123456789012345");
+
         // This adds a button to the plugin installer entry of this plugin which allows
         // to toggle the display status of the configuration ui
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
@@ -105,7 +115,6 @@ public sealed class Plugin : IDalamudPlugin
         Functions.Dispose();
         WindowSystem.RemoveAllWindows();
         ConfigWindow.Dispose();
-
     }
 
     public void PrimaryCommandHandler(string command, string args)
@@ -173,6 +182,30 @@ public sealed class Plugin : IDalamudPlugin
                 res = false;
                 break;
         }
+    }
+
+    public (string, string) GenerateName(IPlayerCharacter? player)
+    {
+        if (!First.HasValue || !Last.HasValue) return ("John", "Final'fantasy");
+
+        byte race;
+        byte clan;
+        byte gender;
+
+        if (player == null)
+        {
+            race = 1;
+            clan = 1;
+            gender = 0;
+        } else
+        {
+            race = player.Customize[(int)CustomizeIndex.Race];
+            clan = player.Customize[(int)CustomizeIndex.Tribe];
+            gender = player.Customize[(int)CustomizeIndex.Gender];
+        }
+
+        this.Functions.GenerateName(race, clan, gender, First.Value, Last.Value);
+        return (First.Value.StringPtr.ToString(), Last.Value.StringPtr.ToString());
     }
 
     private void ToggleSelf(string command, string args)

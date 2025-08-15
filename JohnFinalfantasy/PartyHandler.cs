@@ -25,6 +25,7 @@ internal abstract class PartyHandler
     public abstract bool ReplacePartyMemberNames(SeString text);
     public abstract bool UpdatePartyList(int expected);
     public abstract void ResetPartyList();
+    public abstract (string, string) GenerateName(int playerIndex);
 
     public bool UpdatePartyListForSelf()
     {

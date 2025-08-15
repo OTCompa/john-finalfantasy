@@ -23,7 +23,7 @@ internal unsafe class Obscurer : IDisposable
 
     private LocalPartyHandler localPartyHandler { get; set; }
     private CrossRealmPartyHandler crossRealmPartyHandler { get; set; }
-    private PartyHandler currentPartyHandler { get; set; }
+    internal PartyHandler currentPartyHandler { get; set; }
 
     internal Obscurer(Plugin plugin)
     {

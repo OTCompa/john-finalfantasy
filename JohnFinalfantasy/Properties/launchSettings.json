@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "JohnFinalfantasy": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

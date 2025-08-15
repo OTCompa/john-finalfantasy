@@ -78,4 +78,9 @@ internal class CrossRealmPartyHandler : PartyHandler
             resetPartyHelper(contentId);
         }
     }
+
+    public override (string, string) GenerateName(int playerIndex)
+    {
+        return Plugin.GenerateName(null);
+    }
 }

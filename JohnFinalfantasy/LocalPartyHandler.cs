@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.ClientState.Objects.Enums;
 
 namespace JohnFinalfantasy;
 
@@ -86,5 +88,25 @@ internal class LocalPartyHandler : PartyHandler
             playerList.UpdateEntryTextNode(contentId, hudParty->PartyMembers[i].Name);
             resetPartyHelper(contentId);
         }
+    }
+
+    public override (string, string) GenerateName(int playerIndex)
+    {
+        IPlayerCharacter? player = null;
+        Service.PluginLog.Debug($"hi: {playerIndex}");
+        if (playerIndex == 0)
+        {
+            player = Service.ClientState.LocalPlayer;
+        } else
+        {
+            var temp = Service.PartyList[playerIndex];
+
+            if (temp != null && temp.GameObject?.ObjectKind == ObjectKind.Player)
+            {
+                player = temp as IPlayerCharacter;
+            }
+        }
+
+        return Plugin.GenerateName(player);
     }
 }
