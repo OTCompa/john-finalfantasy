@@ -11,9 +11,8 @@ namespace JohnFinalfantasy;
 internal static class Util {
     internal static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
-    // group 1 matches everything up till the first uppercase letter that's not between the payload bytes (\x02 and \x03)
-    internal static readonly Regex LevelPrefix = new("^((?:\u0002.*\u0003|[^A-Z])+)(.*)$", RegexOptions.Compiled);
-    //  Frey Luna
+    // group 1 matches everything up till the first uppercase letter
+    internal static readonly Regex LevelPrefix = new("^((?:[^A-Z])+)(.*)$", RegexOptions.Compiled);
 
     internal static void ReplacePlayerName(this SeString text, string name, string replacement) {
         if (string.IsNullOrEmpty(name)) {
