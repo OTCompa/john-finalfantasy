@@ -54,6 +54,7 @@ internal abstract class PartyHandler
 
         var textNode = hudParty->PartyMembers[pos].Name;
         Service.PluginLog.Debug(textNode->NodeText.ToString());
+        playerList.UpdateEntryRawString(contentId, textNode->NodeText.ToString());
         string? prefix = Util.GetPrefix(textNode->NodeText);
         if (!string.IsNullOrEmpty(prefix))
         {
@@ -62,9 +63,9 @@ internal abstract class PartyHandler
                 Service.PluginLog.Error("Unable to update player's text node: " + contentId.ToString());
                 return false;
             }
-            if (!playerList.GetReplacement(contentId, out var replacement))
+            if (!playerList.TryGetReplacement(contentId, out var replacement))
             {
-                Service.PluginLog.Error("Unable to retrieve replacement name: " + contentId.ToString());
+                Service.PluginLog.Error("Unable to retrieve ReplacementName name: " + contentId.ToString());
                 return false;
             }
             textNode->SetText(prefix + replacement!);
@@ -79,9 +80,9 @@ internal abstract class PartyHandler
                     Service.PluginLog.Error("Unable to update player's text node: " + contentId.ToString());
                     return false;
                 }
-                if (!playerList.GetReplacement(contentId, out var replacement))
+                if (!playerList.TryGetReplacement(contentId, out var replacement))
                 {
-                    Service.PluginLog.Error("Unable to retrieve replacement name: " + contentId.ToString());
+                    Service.PluginLog.Error("Unable to retrieve ReplacementName name: " + contentId.ToString());
                     return false;
                 }
                 textNode->SetText(replacement!);
@@ -92,11 +93,9 @@ internal abstract class PartyHandler
 
     protected unsafe void resetPartyHelper(ulong contentId)
     {
-        if (!playerList.GetOriginal(contentId, out var original)) return;
-        if (!playerList.GetTextNode(contentId, out var textNode)) return;
+        if (!playerList.TryGetOriginal(contentId, out var original)) return;
+        if (!playerList.TryGetTextNode(contentId, out var textNode)) return;
 
-        string? prefix = Util.GetPrefix(textNode->NodeText);
-        if (string.IsNullOrEmpty(prefix)) textNode->SetText(original!);
-        else textNode->SetText(prefix + original!);
+        textNode->SetText(original!);
     }
 }

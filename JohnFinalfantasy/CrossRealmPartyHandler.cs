@@ -26,7 +26,7 @@ internal class CrossRealmPartyHandler : PartyHandler
             string? name = pMember.NameString;
 
             if (string.IsNullOrEmpty(name)) continue;
-            if (!playerList.GetReplacement(pMember.ContentId, out var replacement)) continue;
+            if (!playerList.TryGetReplacement(pMember.ContentId, out var replacement)) continue;
 
             text.ReplacePlayerName(name, replacement!);
             changed = true;

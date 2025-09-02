@@ -23,7 +23,7 @@ internal class LocalPartyHandler : PartyHandler
         {
             if ((ulong)pMember.ContentId == selfContentId) continue;
             string name = pMember.Name.ToString();
-            if (!playerList.GetReplacement((ulong)pMember.ContentId, out var replacement)) continue;
+            if (!playerList.TryGetReplacement((ulong)pMember.ContentId, out var replacement)) continue;
 
             text.ReplacePlayerName(name, replacement!);
             changed = true;
