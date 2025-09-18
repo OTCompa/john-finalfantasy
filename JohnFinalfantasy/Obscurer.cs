@@ -43,12 +43,12 @@ internal unsafe class Obscurer : IDisposable
 
     public void Dispose()
     {
+        ResetPartyList();
         this.Plugin.Functions.OnAtkTextNodeSetText -= this.OnAtkTextNodeSetText;
         Service.ClientState.Login -= this.OnLogin;
         Service.Framework.Update -= this.OnFrameworkUpdate;
         Service.NamePlateGui.OnDataUpdate -= NamePlateGuiOnOnDataUpdate;
         Service.ChatGui.ChatMessage -= OnChatMessage;
-        if (this.stateChanged) ResetPartyList();
     }
 
     private void OnLogin()
