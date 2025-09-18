@@ -8,11 +8,10 @@ using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace JohnFinalfantasy;
 
-internal static class Util {
+internal static partial class Util {
     internal static readonly Regex Coords = new(@"^X: \d+. Y: \d+.(?: Z: \d+.)?$", RegexOptions.Compiled);
 
-    // group 1 matches everything up till the first uppercase letter
-    internal static readonly Regex LevelPrefix = new("^((?:[^A-Z])+)(.*)$", RegexOptions.Compiled);
+    internal static readonly Regex LevelPrefix = PrefixRegex();
 
     internal static void ReplacePlayerName(this SeString text, string name, string replacement) {
         if (string.IsNullOrEmpty(name)) {
@@ -79,4 +78,7 @@ internal static class Util {
         return InfoProxyCrossRealm.Instance()->CrossRealmGroups[playerParty];
     }
 
+    // right to left, group 2 matches name, group 1 matches anything else 
+    [GeneratedRegex("^(.*\\s)?([A-Za-z.' ]+)$", RegexOptions.Compiled | RegexOptions.RightToLeft)]
+    private static partial Regex PrefixRegex();
 }
