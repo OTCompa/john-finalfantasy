@@ -128,7 +128,7 @@ internal unsafe class Obscurer : IDisposable
                 var chara = (FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)handler.PlayerCharacter?.Address;
                 if (chara == null) return;
                 var contentId = chara->ContentId;
-                if (playerList.TryGetReplacement(contentId, out var replacement))
+                if (playerList.GetReplacement(contentId, out var replacement))
                 {
                     if (replacement.IsNullOrEmpty()) return;
                     handler.Name = replacement;
@@ -187,7 +187,7 @@ internal unsafe class Obscurer : IDisposable
         if (player != null)
         {
             var playerName = player.Name.ToString();
-            if (playerList.TryGetReplacement(contentId, out var replacement))
+            if (playerList.GetReplacement(contentId, out var replacement))
             {
                 text.ReplacePlayerName(playerName, replacement!);
                 return true;
