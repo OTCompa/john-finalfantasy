@@ -36,6 +36,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string DebugCommandUpdateParty = "/updateplist";
     private const string DebugCommandUpdateSelf = "/updateself";
     private const string DebugCommandResetParty = "/resetplist";
+    private const string DebugCommandTestString = "/jfteststring";
 #endif
     public Plugin()
     {
@@ -81,6 +82,11 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.AddHandler(DebugCommandResetParty, new CommandInfo(ResetParty)
         {
             HelpMessage = "Force reset the party list, debug command"
+        });
+
+        CommandManager.AddHandler(DebugCommandTestString, new CommandInfo(TestString)
+        {
+            HelpMessage = "Test string"
         });
 #endif
         PluginInterface.UiBuilder.Draw += DrawUI;
@@ -236,6 +242,11 @@ public sealed class Plugin : IDalamudPlugin
     internal void UpdateParty(string command, string args) => Obscurer.UpdatePartyList();
     internal void ResetParty(string command, string args) => Obscurer.ResetPartyList();
     internal void UpdateSelf(string command, string args) => Obscurer.UpdatePartyListForSelf();
+    private void TestString(string command, string args)
+    {
+        var chatMsg = new SeString(new TextPayload("Test \x02\x1A\x02\x01\x03 String"));
+        Service.ChatGui.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
+    }
     private void DrawUI() => WindowSystem.Draw();
     public void ToggleConfigUI() => ConfigWindow.Toggle();
     internal void ToggleSettings(string command, string args) => ConfigWindow.Toggle();

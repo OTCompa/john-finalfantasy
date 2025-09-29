@@ -79,6 +79,7 @@ internal static partial class Util {
     }
 
     // right to left, group 2 matches name, group 1 matches anything else 
-    [GeneratedRegex("^(.*\\s)?([A-Za-z.' ]+)$", RegexOptions.Compiled | RegexOptions.RightToLeft)]
+    // non-capturing group is a blank character? might be line terminator?
+    [GeneratedRegex("^(.*\\s)?([A-Za-z.' ]+)(?:\u0002\u001a\u0002\u0001\u0003)?$", RegexOptions.Compiled | RegexOptions.RightToLeft)]
     private static partial Regex PrefixRegex();
 }
