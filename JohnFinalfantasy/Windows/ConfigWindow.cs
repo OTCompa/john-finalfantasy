@@ -49,7 +49,6 @@ public class ConfigWindow : Window, IDisposable
             configuration.EnableForSelf = self;
             configuration.Save();
             this.plugin.Obscurer.ResetPartyList();
-            this.plugin.Obscurer.partySize = -1;
         }
 
         ImGui.SameLine();
@@ -60,7 +59,6 @@ public class ConfigWindow : Window, IDisposable
             configuration.EnableForParty = party;
             configuration.Save();
             this.plugin.Obscurer.ResetPartyList();
-            this.plugin.Obscurer.partySize = -1;
         }
 
         ImGui.Separator();

@@ -16,10 +16,10 @@ internal unsafe class Obscurer : IDisposable
     private Plugin Plugin { get; }
     internal PlayerList playerList;
 
-    internal bool stateChanged = false;
-    internal int partySize { get; set; } = 0;
+    private bool stateChanged = false;
+    private int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
-    internal bool isFirst { get; set; } = true;
+    private bool isFirst { get; set; } = true;
 
     private LocalPartyHandler localPartyHandler { get; set; }
     private CrossRealmPartyHandler crossRealmPartyHandler { get; set; }
@@ -210,7 +210,7 @@ internal unsafe class Obscurer : IDisposable
             crossRealmPartyHandler.ResetPartyList();
         else
             localPartyHandler.ResetPartyList();
-
+        partySize = -1;
         stateChanged = false;
     }
 
