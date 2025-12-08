@@ -141,8 +141,8 @@ internal unsafe class Obscurer : IDisposable
     {
         if (!this.Plugin.Configuration.EnableForChat) return;
 
-        var player = Service.ClientState.LocalPlayer;
-        var playerContentId = Service.ClientState.LocalContentId;
+        var player = Service.ObjectTable.LocalPlayer;
+        var playerContentId = Service.PlayerState.ContentId;
 
         if (player != null && this.Plugin.Configuration.EnableForSelf)
         {
@@ -165,8 +165,8 @@ internal unsafe class Obscurer : IDisposable
         if (!this.Plugin.Configuration.EnableForAllText) return false;
 
         var changed = false;
-        var player = Service.ClientState.LocalPlayer;
-        var playerContentId = Service.ClientState.LocalContentId;
+        var player = Service.ObjectTable.LocalPlayer;
+        var playerContentId = Service.PlayerState.ContentId;
 
         if (player != null && this.Plugin.Configuration.EnableForSelf)
         {

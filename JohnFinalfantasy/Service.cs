@@ -10,6 +10,8 @@ internal class Service
     [PluginService] internal static IPluginLog PluginLog { get; private set; } = null!;
     [PluginService] internal static IGameInteropProvider GameInteropProvider { get; set; } = null!;
     [PluginService] internal static IClientState ClientState { get; set; } = null!;
+    [PluginService] internal static IObjectTable ObjectTable { get; set; } = null!;
+    [PluginService] internal static IPlayerState PlayerState { get; set; } = null!;
     [PluginService] internal static IFramework Framework { get; set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; set; } = null!;

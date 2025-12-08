@@ -28,8 +28,8 @@ internal abstract class PartyHandler
 
     public bool UpdatePartyListForSelf()
     {
-        var player = Service.ClientState.LocalPlayer;
-        var playerContentId = Service.ClientState.LocalContentId;
+        var player = Service.ObjectTable.LocalPlayer;
+        var playerContentId = Service.PlayerState.ContentId;
 
         if (player == null) return false;
         var originalName = player.Name.ToString();

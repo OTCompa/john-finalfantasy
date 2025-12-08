@@ -17,7 +17,7 @@ internal class LocalPartyHandler : PartyHandler
     public override bool ReplacePartyMemberNames(SeString text)
     {
         bool changed = false;
-        var selfContentId = Service.ClientState.LocalContentId;
+        var selfContentId = Service.PlayerState.ContentId;
 
         foreach (var pMember in Service.PartyList)
         {
@@ -35,7 +35,7 @@ internal class LocalPartyHandler : PartyHandler
     public override unsafe bool UpdatePartyList(int expected)
     {
         bool ret = true;
-        var playerContentId = Service.ClientState.LocalContentId;
+        var playerContentId = Service.PlayerState.ContentId;
 
         var hudParty = (AddonPartyList*)Service.GameGui.GetAddonByName("_PartyList").Address;
         if (hudParty == null)
