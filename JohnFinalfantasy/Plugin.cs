@@ -140,11 +140,13 @@ public sealed class Plugin : IDalamudPlugin
                 HandleSubArgs(Configuration.EnableForSelf, action, out var selfRes);
                 Configuration.EnableForSelf = selfRes;
                 Configuration.Save();
+                Obscurer.ResetPartyList();
                 break;
             case "party":
                 HandleSubArgs(Configuration.EnableForParty, action, out var partyRes);
                 Configuration.EnableForParty = partyRes;
                 Configuration.Save();
+                Obscurer.ResetPartyList();
                 break;
             case "chat":
                 HandleSubArgs(Configuration.EnableForChat, action, out var chatRes);
