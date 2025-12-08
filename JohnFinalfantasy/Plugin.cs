@@ -162,8 +162,6 @@ public sealed class Plugin : IDalamudPlugin
                 HandleSubArgs(Configuration.EnableForSelf, action, out var allRes);
                 Configuration.EnableForSelf = allRes;
                 Configuration.EnableForParty = allRes;
-                Configuration.EnableForChat = allRes;
-                Configuration.EnableForAllText = allRes;
                 Configuration.Save();
                 Obscurer.ResetPartyList();
                 break;

@@ -17,6 +17,7 @@ internal unsafe class Obscurer : IDisposable
     internal PlayerList playerList;
 
     private bool stateChanged = false;
+    private bool requestNameplateUpdate = false;
     private int partySize { get; set; } = 0;
     private bool crossRealm { get; set; } = false;
     private bool isFirst { get; set; } = true;
@@ -95,6 +96,12 @@ internal unsafe class Obscurer : IDisposable
         if (this.Plugin.Configuration.EnableForParty)
         {
             if (!UpdatePartyList(partySize)) this.partySize = -1;
+        }
+
+        if (requestNameplateUpdate)
+        {
+            Service.NamePlateGui.RequestRedraw();
+            requestNameplateUpdate = false;
         }
     }
 
@@ -211,7 +218,9 @@ internal unsafe class Obscurer : IDisposable
         else
             localPartyHandler.ResetPartyList();
         partySize = -1;
-        Service.NamePlateGui.RequestRedraw();
+
+        // seems like this works better on the main thread
+        requestNameplateUpdate = true;
         stateChanged = false;
     }
 
