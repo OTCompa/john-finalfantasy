@@ -158,6 +158,15 @@ public sealed class Plugin : IDalamudPlugin
                 Configuration.EnableForAllText = remainingRes;
                 Configuration.Save();
                 break;
+            case "all":
+                HandleSubArgs(Configuration.EnableForSelf, action, out var allRes);
+                Configuration.EnableForSelf = allRes;
+                Configuration.EnableForParty = allRes;
+                Configuration.EnableForChat = allRes;
+                Configuration.EnableForAllText = allRes;
+                Configuration.Save();
+                Obscurer.ResetPartyList();
+                break;
             default:
                 Usage();
                 break;
@@ -189,7 +198,7 @@ public sealed class Plugin : IDalamudPlugin
             """
             Usage:
                 /jf [setting] [OPTIONAL:state]
-                Available settings: self, party, chat, remaining
+                Available settings: self, party, chat, remaining, all
                 Available states: [blank] (toggle), on, off
                 Examples:
                 Toggle self masking: /jf self
