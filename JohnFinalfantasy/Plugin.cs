@@ -181,48 +181,6 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void ToggleSelf(string command, string args)
-    {
-        this.Configuration.EnableForSelf = !this.Configuration.EnableForSelf;
-        this.Configuration.Save();
-        this.Obscurer.ResetPartyList();
-        this.Obscurer.partySize = -1;
-
-    }
-
-    private void ToggleParty(string command, string args)
-    {
-        this.Configuration.EnableForParty = !this.Configuration.EnableForParty;
-
-        this.Configuration.Save();
-        this.Obscurer.ResetPartyList();
-        this.Obscurer.partySize = -1;
-    }
-
-    private void SetAll(string command, string args)
-    {
-        var splitArgs = args.Split(' ');
-        switch (splitArgs[0])
-        {
-            case "on":
-                this.Configuration.EnableForSelf = true;
-                this.Configuration.EnableForParty = true;
-                this.Obscurer.ResetPartyList();
-                this.Obscurer.partySize = -1;
-                break;
-            case "off":
-                this.Configuration.EnableForSelf = false;
-                this.Configuration.EnableForParty = false;
-                this.Obscurer.ResetPartyList();
-                this.Obscurer.partySize = -1;
-                break;
-            default:
-                var chatMsg = new SeString(new TextPayload("Invalid argument."));
-                Service.ChatGui.Print(new XivChatEntry { Message = chatMsg, Type = XivChatType.Echo });
-                break;
-        }
-    }
-
     private void Usage()
     {
         var chatMsg = new SeString(new TextPayload(
