@@ -211,6 +211,7 @@ internal unsafe class Obscurer : IDisposable
         else
             localPartyHandler.ResetPartyList();
         partySize = -1;
+        Service.NamePlateGui.RequestRedraw();
         stateChanged = false;
     }
 
