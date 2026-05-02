@@ -1,3 +1,4 @@
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Game.Text;
@@ -144,7 +145,7 @@ internal unsafe class Obscurer : IDisposable
         }
     }
 
-    private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+    private void OnChatMessage(IHandleableChatMessage message)
     {
         if (!this.Plugin.Configuration.EnableForChat) return;
 
@@ -153,14 +154,14 @@ internal unsafe class Obscurer : IDisposable
 
         if (player != null && this.Plugin.Configuration.EnableForSelf)
         {
-             ReplacePlayerName(player, playerContentId, sender);
-             ReplacePlayerName(player, playerContentId, message);
+             ReplacePlayerName(player, playerContentId, message.Sender);
+             ReplacePlayerName(player, playerContentId, message.Message);
         }
 
         if (this.Plugin.Configuration.EnableForParty)
         {
-            currentPartyHandler.ReplacePartyMemberNames(sender);
-            currentPartyHandler.ReplacePartyMemberNames(message);
+            currentPartyHandler.ReplacePartyMemberNames(message.Sender);
+            currentPartyHandler.ReplacePartyMemberNames(message.Message);
         }
     }
 
