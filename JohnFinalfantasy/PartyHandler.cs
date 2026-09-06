@@ -1,3 +1,4 @@
+using Dalamud.Game.Text.Evaluator;
 using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System;
@@ -33,7 +34,7 @@ internal abstract class PartyHandler
 
         if (player == null) return false;
         var originalName = player.Name.ToString();
-        var replacement = this.Plugin.Configuration.PartyNames[0];
+        var replacement = Plugin.Configuration.UseJobNames ? GetJobName((byte)player.ClassJob.RowId) : this.Plugin.Configuration.PartyNames[0];
         playerList.AddEntry(playerContentId, originalName, replacement);
 
         Service.PluginLog.Info("Self updating: " + originalName + " -> " + replacement);
@@ -99,4 +100,6 @@ internal abstract class PartyHandler
         if (string.IsNullOrEmpty(prefix)) textNode->SetText(original!);
         else textNode->SetText(prefix + original!);
     }
+
+    internal static string GetJobName(byte classJobId) => Service.Evaluator.EvaluateFromAddon(698, [new SeStringParameter(classJobId)]).ToString();
 }

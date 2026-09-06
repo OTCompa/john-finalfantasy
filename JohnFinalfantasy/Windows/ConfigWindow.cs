@@ -62,7 +62,7 @@ public class ConfigWindow : Window, IDisposable
         }
 
         ImGui.Separator();
-        ImGui.Text("Additional replacements");
+        ImGui.Text("Additional options");
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
         {
             ImGui.SetTooltip("Still requires the corresponding checkboxes above to be enabled.");
@@ -86,6 +86,14 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.None))
         {
             ImGui.SetTooltip("All other text like character info window, social party window, cross-world/local linkshell window, etc.\nMay affect performance.");
+        }
+
+        var job = configuration.UseJobNames;
+        if (ImGui.Checkbox("Use Job Names", ref job))
+        {
+            configuration.UseJobNames = job;
+            configuration.Save();
+            this.plugin.Obscurer.ResetPartyList();
         }
 
         ImGui.Separator();

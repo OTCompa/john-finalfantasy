@@ -14,6 +14,7 @@ public class Configuration : IPluginConfiguration
     public bool EnableForChat { get; set; } = false;
     public bool EnableForSelf {  get; set; } = false;
     public bool EnableForParty { get; set; } = false;
+    public bool UseJobNames { get; set;  } = false;
     public List<string> PartyNames { get; set; } = new List<string>();
     // the below exist just to make saving less cumbersome
     [NonSerialized]

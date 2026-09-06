@@ -16,6 +16,7 @@ internal class Service
     [PluginService] internal static IGameGui GameGui { get; set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; set; } = null!;
     [PluginService] internal static INamePlateGui NamePlateGui { get; set; } = null!;
+    [PluginService] internal static ISeStringEvaluator Evaluator { get; set; } = null!;
 
     internal static void Initialize(IDalamudPluginInterface pluginInterface)
     {

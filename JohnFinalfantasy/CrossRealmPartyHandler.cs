@@ -1,3 +1,4 @@
+using Dalamud.Game.Text.Evaluator;
 using Dalamud.Game.Text.SeStringHandling;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
@@ -12,7 +13,7 @@ namespace JohnFinalfantasy;
 internal class CrossRealmPartyHandler : PartyHandler
 {
     public CrossRealmPartyHandler(Plugin plugin, ref bool stateChanged, ref PlayerList playerList)
-        : base(plugin, ref stateChanged, ref playerList) {}
+        : base(plugin, ref stateChanged, ref playerList) { }
 
     public override unsafe bool ReplacePartyMemberNames(SeString text)
     {
@@ -46,7 +47,7 @@ internal class CrossRealmPartyHandler : PartyHandler
             var pMember = crParty.GroupMembers[i];
             var contentId = pMember.ContentId;
             var original = pMember.NameString;
-            var replacement = this.Plugin.Configuration.PartyNames[i];
+            var replacement = Plugin.Configuration.UseJobNames ? GetJobName(pMember.ClassJobId) : this.Plugin.Configuration.PartyNames[i];
             playerList.AddEntry(contentId, original, replacement);
 
             if (!updatePartyListHelper(contentId, i))

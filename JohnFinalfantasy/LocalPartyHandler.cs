@@ -56,7 +56,9 @@ internal class LocalPartyHandler : PartyHandler
             var pMember = localParty->PartyMembers[i];
             string? original = pMember.Name.ToString();
             if (string.IsNullOrEmpty(original)) continue;
-            var replacement = this.Plugin.Configuration.PartyNames[i];
+            var classJob = pMember.Object != null ? pMember.Object->ClassJob : (byte)0;
+            Service.PluginLog.Debug("log");
+            var replacement = Plugin.Configuration.UseJobNames ? GetJobName(classJob) : this.Plugin.Configuration.PartyNames[i];
             var contentId = pMember.ContentId;
             playerList.AddEntry(contentId, original!, replacement);
             if (ret)
